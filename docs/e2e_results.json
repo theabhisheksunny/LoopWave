@@ -47,7 +47,8 @@
     }
   ],
   "consoleLogs": [
-    "[warning] Unrecognized feature: 'web-share'."
+    "[warning] Unrecognized feature: 'web-share'.",
+    "[error] Permissions policy violation: compute-pressure is not allowed in this document."
   ],
   "networkLogs": []
 }

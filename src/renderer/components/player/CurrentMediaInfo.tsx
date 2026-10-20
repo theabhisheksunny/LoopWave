@@ -3,15 +3,14 @@ import {
   Copy,
   Check,
   Sparkles,
-  ExternalLink,
   Youtube,
   Film,
   Music,
   Radio,
-  Clock,
-  ShieldCheck
+  Clock
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
+import { PlaybackStatusBadge } from './PlaybackStatusBadge';
 
 export const CurrentMediaInfo: React.FC = () => {
   const { currentSource, adapterState, currentSession } = usePlayerStore();
@@ -62,7 +61,7 @@ export const CurrentMediaInfo: React.FC = () => {
   return (
     <div className="w-full bg-[#111B2B] rounded-2xl border border-[#293750] p-3.5 shadow-xl select-none">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
-        {/* Left: Thumbnail icon + Title + Canonical URL */}
+        {/* Left: Thumbnail / Source Icon + Title + Source URL */}
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="w-10 h-10 rounded-xl bg-[#18243A] border border-[#293750] flex items-center justify-center shrink-0 shadow-sm">
             {getSourceIcon(currentSource.sourceType)}
@@ -70,7 +69,10 @@ export const CurrentMediaInfo: React.FC = () => {
 
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-semibold text-xs text-[#F5F7FF] truncate" title={currentSource.title || currentSource.videoId}>
+              <h4
+                className="font-semibold text-xs text-[#F5F7FF] truncate"
+                title={currentSource.title || currentSource.videoId}
+              >
                 {currentSource.title || (currentSource.videoId ? `Video: ${currentSource.videoId}` : 'Direct Media Stream')}
               </h4>
               <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#18243A] border border-[#293750] text-[#18D8E8] shrink-0">
@@ -86,7 +88,7 @@ export const CurrentMediaInfo: React.FC = () => {
                 type="button"
                 onClick={handleCopyUrl}
                 className="p-0.5 hover:text-[#F5F7FF] transition-colors"
-                title="Copy link"
+                title="Copy source link"
                 aria-label="Copy source link"
               >
                 {copiedUrl ? <Check className="w-3 h-3 text-[#12C98A]" /> : <Copy className="w-3 h-3" />}
@@ -95,7 +97,7 @@ export const CurrentMediaInfo: React.FC = () => {
           </div>
         </div>
 
-        {/* Right: Session Info & Loop Status Badges */}
+        {/* Right: Duration, Status Badge, Session UUID & Cycle Badge */}
         <div className="flex flex-wrap items-center gap-2.5 text-xs font-mono shrink-0">
           {/* Duration if known */}
           {adapterState.duration > 0 && (
@@ -105,23 +107,8 @@ export const CurrentMediaInfo: React.FC = () => {
             </div>
           )}
 
-          {/* Status Badge */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#18243A] border border-[#293750]">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                adapterState.status === 'playing'
-                  ? 'bg-[#12C98A] animate-pulse'
-                  : adapterState.status === 'paused'
-                  ? 'bg-slate-400'
-                  : adapterState.status === 'loading' || adapterState.status === 'buffering'
-                  ? 'bg-[#18D8E8] animate-spin'
-                  : 'bg-[#FF667D]'
-              }`}
-            />
-            <span className="text-[11px] uppercase font-semibold text-[#F5F7FF]">
-              {adapterState.status}
-            </span>
-          </div>
+          {/* Color-coded Status Badge */}
+          <PlaybackStatusBadge status={adapterState.status} />
 
           {/* Cycle & Session Badge */}
           {currentSession && (

@@ -2,8 +2,10 @@ import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MainPlayerView } from '../../src/renderer/components/player/MainPlayerView';
+import { PlaybackStatusBadge } from '../../src/renderer/components/player/PlaybackStatusBadge';
+import { EmptyPlayerState } from '../../src/renderer/components/player/EmptyPlayerState';
 
-describe('MainPlayerView Component', () => {
+describe('MainPlayerView & Home Screen Components', () => {
   it('renders url input, play button, canvas and controls', () => {
     const { container } = render(<MainPlayerView />);
 
@@ -38,5 +40,25 @@ describe('MainPlayerView Component', () => {
     const badge = container.querySelector('span.uppercase');
     expect(badge).toBeInTheDocument();
     expect(badge?.textContent).toBe('hls');
+  });
+
+  it('renders EmptyPlayerState correctly with guidance text', () => {
+    render(<EmptyPlayerState />);
+    expect(screen.getByText('No Media Loaded')).toBeInTheDocument();
+    expect(screen.getByText(/Paste a video or audio link above/i)).toBeInTheDocument();
+  });
+
+  it('renders PlaybackStatusBadge for playing, paused, and buffering states', () => {
+    const { rerender } = render(<PlaybackStatusBadge status="playing" />);
+    expect(screen.getByText('Playing')).toBeInTheDocument();
+
+    rerender(<PlaybackStatusBadge status="paused" />);
+    expect(screen.getByText('Paused')).toBeInTheDocument();
+
+    rerender(<PlaybackStatusBadge status="buffering" />);
+    expect(screen.getByText('Buffering')).toBeInTheDocument();
+
+    rerender(<PlaybackStatusBadge status="error" />);
+    expect(screen.getByText('Error')).toBeInTheDocument();
   });
 });

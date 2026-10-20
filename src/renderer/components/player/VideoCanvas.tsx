@@ -1,14 +1,18 @@
-import React, { useEffect, useRef } from 'react';
-import { Loader2, AlertCircle, PlayCircle, Clock, CheckCircle } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Loader2, AlertCircle, Clock, CheckCircle, RotateCcw, ExternalLink, Copy, Check } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
+import { EmptyPlayerState } from './EmptyPlayerState';
 
 export const VideoCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
   const {
     currentSource,
     adapterState,
     countdownRemaining,
-    setContainerElement
+    setContainerElement,
+    loadUrl
   } = usePlayerStore();
 
   useEffect(() => {
@@ -25,6 +29,20 @@ export const VideoCanvas: React.FC = () => {
   const isError = adapterState.status === 'error';
   const isEnded = adapterState.status === 'ended';
   const isIdle = !currentSource;
+
+  const handleRetry = () => {
+    if (currentSource?.canonicalUrl) {
+      loadUrl(currentSource.canonicalUrl, true);
+    }
+  };
+
+  const handleCopyLink = () => {
+    if (currentSource?.canonicalUrl) {
+      navigator.clipboard.writeText(currentSource.canonicalUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
 
   return (
     <div className="relative w-full aspect-video max-h-[58vh] bg-black rounded-2xl overflow-hidden border border-[#293750] shadow-2xl flex items-center justify-center select-none">
@@ -74,7 +92,7 @@ export const VideoCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Error state overlay */}
+      {/* Error state overlay with Retry & Copy Link */}
       {isError && (
         <div className="absolute inset-0 bg-[#080D17]/95 flex flex-col items-center justify-center gap-3 p-6 text-center z-20">
           <div className="w-12 h-12 rounded-2xl bg-[#FF667D]/15 border border-[#FF667D]/40 flex items-center justify-center">
@@ -82,28 +100,37 @@ export const VideoCanvas: React.FC = () => {
           </div>
           <h3 className="text-base font-semibold text-[#F5F7FF]">Playback Error</h3>
           <p className="text-xs text-[#A5B4CF] max-w-md">
-            {adapterState.error?.message || 'An error prevented media from playing.'}
+            {adapterState.error?.message || 'An error prevented this media from playing.'}
           </p>
-          <span className="text-[11px] font-mono text-[#FF667D]/80 bg-[#18243A] px-2.5 py-1 rounded-md border border-[#293750]">
+          <span className="text-[11px] font-mono text-[#FF667D]/90 bg-[#18243A] px-2.5 py-1 rounded-md border border-[#293750]">
             Code: {adapterState.error?.code || 'UNKNOWN'}
           </span>
+
+          <div className="flex items-center gap-2 pt-2">
+            <button
+              type="button"
+              onClick={handleRetry}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6547FF] hover:bg-[#7b61ff] text-white text-xs font-semibold shadow-md transition-all active:scale-95"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Retry</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium transition-colors"
+              title="Copy original media link"
+            >
+              {copiedLink ? <Check className="w-3.5 h-3.5 text-[#12C98A]" /> : <Copy className="w-3.5 h-3.5" />}
+              <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* Idle / Empty state */}
-      {isIdle && (
-        <div className="absolute inset-0 bg-[#080D17] flex flex-col items-center justify-center gap-3 text-center p-8 z-10">
-          <div className="w-16 h-16 rounded-2xl bg-[#111B2B] border border-[#293750] flex items-center justify-center text-[#A5B4CF] shadow-inner">
-            <PlayCircle className="w-8 h-8 text-[#6547FF]" />
-          </div>
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-[#F5F7FF]">No Media Loaded</h3>
-            <p className="text-xs text-[#A5B4CF] max-w-sm">
-              Paste a video or audio link above or select an example to start streaming and looping.
-            </p>
-          </div>
-        </div>
-      )}
+      {isIdle && <EmptyPlayerState />}
     </div>
   );
 };

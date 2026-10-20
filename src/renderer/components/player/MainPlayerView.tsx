@@ -38,8 +38,8 @@ export const MainPlayerView: React.FC = () => {
   };
 
   return (
-    <div className="h-full flex flex-col justify-between p-3.5 md:p-5 overflow-y-auto space-y-3.5 max-w-7xl mx-auto select-none">
-      {/* 1. Top URL Input Bar */}
+    <div className="h-full w-full flex flex-col justify-between p-4 md:p-6 overflow-y-auto space-y-4 max-w-[1600px] mx-auto select-none">
+      {/* 1. Top Horizontal URL Input Bar */}
       <UrlInputBar
         urlInput={urlInput}
         setUrlInput={setUrlInput}
@@ -49,10 +49,10 @@ export const MainPlayerView: React.FC = () => {
         setFeedback={setFeedback}
       />
 
-      {/* 2. Main Player & Up Next Queue Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-3.5 min-h-[340px]">
+      {/* 2. Main Playback Area & Right-Side Queue Grid */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[350px]">
         {/* Main Player Column (2/3 width on desktop) */}
-        <div className="lg:col-span-2 flex flex-col justify-between space-y-2">
+        <div className="lg:col-span-2 flex flex-col justify-between space-y-2.5">
           <div className="flex-1 flex flex-col justify-center">
             <VideoCanvas />
           </div>
@@ -65,10 +65,10 @@ export const MainPlayerView: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Playback Settings Strip (Focal Play/Pause, Loop Mode, Delay, Volume) */}
+      {/* 3. Playback Settings Strip */}
       <PlaybackSettings />
 
-      {/* 4. Current Media Information Panel */}
+      {/* 4. Current Media Information Card */}
       <CurrentMediaInfo />
     </div>
   );

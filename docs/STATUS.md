@@ -1,6 +1,6 @@
 # LoopWave — Project Status
 
-**Current Status**: Complete, Redesigned & Verified (Version 1.0.0)  
+**Current Status**: Phase 1 (Home / Player Screen Redesign) Complete & Verified (Version 1.0.0)  
 **Last Updated**: 2026-10-20  
 **Environment**: Windows 11 x64, Node.js v24.14.0, npm 11.9.0, Python 3.12.10, Electron 32.3.3  
 
@@ -15,8 +15,8 @@
 | **Phase 3** | Session Lifecycle & Looping Controller | COMPLETE | `PlaybackSessionManager` generates fresh UUIDs per cycle with stable `videoId`. `LoopController` supports repeat-off, repeat-1, repeat-all, inter-loop delay, and safe timer cancellation. 20-cycle stability verified. |
 | **Phase 4** | Local Analytics Service & Dashboard | COMPLETE | Local metrics calculation (sessions, cycles, watch time, avg duration, failures, buffer events). SVG charts, CSV/JSON export, date filters. |
 | **Phase 5** | Personal Media Library & Settings | COMPLETE | SQLite persistence (via `sql.js`), bookmarks, favorites, collections, duplicate URL detection, Private Mode (RAM-only), retention policy, purge data. |
-| **Phase 6** | Premium UI Redesign & Functional Integration | COMPLETE | Redesigned with Left Sidebar (`AppSidebar`), Top URL Bar (`UrlInputBar`), Player Viewport (`VideoCanvas`), Timeline (`PlayerControls`), Up Next (`QueuePanel`), Master Playback Strip (`PlaybackSettings`), Metadata Panel (`CurrentMediaInfo`), and dedicated Playlist manager (`PlaylistScreen`). Design tokens matched to reference. |
-| **Phase 7** | Automated E2E Testing & Windows Packaging | COMPLETE | 56/56 passing Vitest unit/integration tests. 9/9 passing Playwright Electron E2E tests. Standalone Windows executable packaged at `release/win-unpacked/LoopWave.exe` (SHA-256 verified). |
+| **Phase 6** | Incremental UI Redesign — Phase 1: Home / Player Screen | COMPLETE | Redesigned Home/Player workspace according to concept board with 8px-based spacing scale, 10-16px radii, subtle borders, no overlapping controls. Implemented modular components: `UrlInputBar`, `VideoCanvas`, `EmptyPlayerState`, `PlayerControls`, `QueuePanel`, `QueueItem`, `PlaybackSettings`, `CurrentMediaInfo`, `PlaybackStatusBadge`. Other 4 screens preserved untouched. |
+| **Phase 7** | Automated E2E Testing & Windows Packaging | COMPLETE | 58/58 passing Vitest unit/integration tests. 9/9 passing Playwright Electron E2E tests. Standalone Windows executable packaged at `release/win-unpacked/LoopWave.exe` (SHA-256 verified). |
 
 ---
 
@@ -25,7 +25,7 @@
 ### 1. Vitest Suite
 - **Framework**: Vitest v3.2.7
 - **Test Files**: 10 passed (10 total)
-- **Tests**: 56 passed (56 total)
+- **Tests**: 58 passed (58 total)
 - **Failures**: 0
 
 ### 2. Playwright Electron End-to-End Suite
@@ -41,6 +41,6 @@
 
 ## Packaged Windows Release
 - **Executable**: `release/win-unpacked/LoopWave.exe` (~186 MB)
-- **SHA-256 Checksum**: `173356DE182C4E566D5CA2720255F138E49A7FCAA9BA86FFEB1B5D133CE87A9E`
+- **SHA-256 Checksum**: `79C33D1826CE07E690EBD80E5A7880C6AC76AAEEF17A9BE52249D19367FB7971`
 - **Architecture**: Windows x64
 - **Startup verified**: Launches and runs production build cleanly.
