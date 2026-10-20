@@ -1,0 +1,19 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.loopwave.app",
+  "productName": "LoopWave",
+  "copyright": "Copyright © 2026 LoopWave Team",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "dist/**/*",
+    "package.json",
+    "node_modules/sql.js/**/*"
+  ],
+  "win": {
+    "target": "dir",
+    "sign": null,
+    "signAndEditExecutable": false
+  }
+}
