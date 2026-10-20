@@ -110,7 +110,7 @@ export const AppSidebar: React.FC = () => {
         {/* About Link Pinned to Bottom */}
         <button
           onClick={() => setRoute('about')}
-          className={`w-full flex items-center gap-3 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all ${
+          className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
             currentRoute === 'about'
               ? 'bg-gradient-to-r from-[#6547FF]/25 to-[#3478FF]/20 text-white border-l-3 border-[#18D8E8]'
               : 'text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A]/60'

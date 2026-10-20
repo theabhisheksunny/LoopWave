@@ -22,6 +22,23 @@ interface QueueItemProps {
   onRemove: (index: number) => void;
 }
 
+export const getSourceIcon = (type: string, className = 'w-3.5 h-3.5') => {
+  switch (type) {
+    case 'youtube':
+      return <Youtube className={`${className} text-[#FF334B]`} />;
+    case 'direct-video':
+    case 'mp4':
+    case 'webm':
+      return <Film className={`${className} text-[#3478FF]`} />;
+    case 'direct-audio':
+    case 'audio':
+      return <Music className={`${className} text-[#12C98A]`} />;
+    case 'hls':
+    default:
+      return <Radio className={`${className} text-[#18D8E8]`} />;
+  }
+};
+
 export const QueueItem: React.FC<QueueItemProps> = ({
   item,
   index,
@@ -32,19 +49,6 @@ export const QueueItem: React.FC<QueueItemProps> = ({
   onReorder,
   onRemove
 }) => {
-  const getSourceIcon = (type: string) => {
-    switch (type) {
-      case 'youtube':
-        return <Youtube className="w-3.5 h-3.5 text-red-400" />;
-      case 'mp4':
-      case 'webm':
-        return <Film className="w-3.5 h-3.5 text-blue-400" />;
-      case 'audio':
-        return <Music className="w-3.5 h-3.5 text-emerald-400" />;
-      default:
-        return <Radio className="w-3.5 h-3.5 text-[#18D8E8]" />;
-    }
-  };
 
   const title = item.source.title || item.source.videoId || item.source.canonicalUrl;
 

@@ -1,10 +1,9 @@
 import { LoopMode, QueueItem, ResolvedSource } from '../../shared/types';
 import { PlaybackSessionManager } from './sessionManager';
-import { PlaybackAdapter } from '../adapters/adapterInterface';
 
 export interface LoopControllerCallbacks {
   onRestartCurrentSource: (source: ResolvedSource) => Promise<void>;
-  onPlayNextQueueItem: (nextItem: QueueItem) => Promise<void>;
+  onPlayNextQueueItem: (nextItem: QueueItem, nextIndex: number) => Promise<void>;
   onDelayTick?: (secondsRemaining: number) => void;
 }
 
@@ -88,7 +87,7 @@ export class LoopController {
         this.scheduleLoopRestart(() => {
           this.currentSource = nextItem.source;
           this.sessionManager.initTrack(nextItem.source);
-          this.callbacks.onPlayNextQueueItem(nextItem);
+          this.callbacks.onPlayNextQueueItem(nextItem, nextIndex);
         });
       } else if (this.queue.length > 0) {
         // Wrap around to start of queue
@@ -97,7 +96,7 @@ export class LoopController {
         this.scheduleLoopRestart(() => {
           this.currentSource = firstItem.source;
           this.sessionManager.initTrack(firstItem.source);
-          this.callbacks.onPlayNextQueueItem(firstItem);
+          this.callbacks.onPlayNextQueueItem(firstItem, 0);
         });
       } else if (this.currentSource) {
         // Fallback: repeat current if queue is empty
@@ -117,7 +116,7 @@ export class LoopController {
         this.scheduleLoopRestart(() => {
           this.currentSource = nextItem.source;
           this.sessionManager.initTrack(nextItem.source);
-          this.callbacks.onPlayNextQueueItem(nextItem);
+          this.callbacks.onPlayNextQueueItem(nextItem, nextIndex);
         });
       } else {
         // Natural end of playback

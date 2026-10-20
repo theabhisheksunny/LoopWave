@@ -54,7 +54,6 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
 
   private player: any = null;
   private timeUpdateInterval: any = null;
-  private currentVideoId: string | null = null;
   private isDisposed = false;
 
   canHandle(source: ResolvedSource): boolean {
@@ -79,7 +78,6 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
     this.dispose();
     this.isDisposed = false;
     this.updateState({ status: 'loading', error: null });
-    this.currentVideoId = source.videoId;
 
     try {
       await loadYouTubeIframeApi();
@@ -113,7 +111,8 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
     if (
       typeof window !== 'undefined' &&
       window.location &&
-      window.location.protocol.startsWith('http')
+      window.location.origin &&
+      window.location.origin !== 'null'
     ) {
       playerVars.origin = window.location.origin;
     }
@@ -137,7 +136,6 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
       try {
         this.player = new window.YT.Player(iframeMountId, {
           videoId: source.videoId,
-          host: 'https://www.youtube.com',
           width: '100%',
           height: '100%',
           playerVars,
@@ -234,20 +232,24 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
 
     switch (errorCode) {
       case 2:
-        message = 'Invalid parameter or video ID.';
+        message = 'Invalid video ID or parameter supplied.';
         break;
       case 5:
         message = 'HTML5 player playback error occurred.';
         break;
       case 100:
-        message = 'Video not found, private, or removed.';
+        message = 'The requested video was not found, is private, or has been removed.';
         break;
       case 101:
       case 150:
-        message = 'Embedding disabled by the video owner.';
+        message = 'The video owner does not allow embedded playback. Use "Open on YouTube" to watch directly.';
+        break;
+      case 152:
+      case 153:
+        message = 'Playback restricted or embedder identity verification failed. Use "Open on YouTube" to watch.';
         break;
       default:
-        message = `YouTube error code ${errorCode}.`;
+        message = `YouTube playback error (${errorCode}).`;
         break;
     }
 
@@ -358,7 +360,6 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
       this.player = null;
     }
 
-    this.currentVideoId = null;
     this.updateState({ status: 'idle', error: null, currentTime: 0, duration: 0 });
   }
 }

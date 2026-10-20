@@ -2,6 +2,7 @@ import { app, session } from 'electron';
 import { createMainWindow, getMainWindow } from './window';
 import { DatabaseManager } from './storage/db';
 import { registerIpcHandlers } from './ipc/handlers';
+import { stopLocalServer } from './server';
 
 // Allow programmatic media playback without requiring initial user click on document
 app.commandLine.appendSwitch('autoplay-policy', 'no-user-gesture-required');
@@ -30,35 +31,20 @@ if (!gotTheLock) {
     // Register all IPC endpoints
     registerIpcHandlers(dbManager);
 
-    // Inject valid Referer header for YouTube iframe requests to satisfy embedder identity requirements
-    session.defaultSession.webRequest.onBeforeSendHeaders((details, callback) => {
-      const url = details.url.toLowerCase();
-      if (
-        url.includes('youtube.com') ||
-        url.includes('youtube-nocookie.com') ||
-        url.includes('googlevideo.com') ||
-        url.includes('ytimg.com')
-      ) {
-        details.requestHeaders['Referer'] = 'https://www.youtube.com/';
-        details.requestHeaders['Origin'] = 'https://www.youtube.com';
-      }
-      callback({ requestHeaders: details.requestHeaders });
-    });
-
     // Content Security Policy
     session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
           'Content-Security-Policy': [
-            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data:; " +
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com https://www.google.com https://*.doubleclick.net; " +
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
-            "font-src 'self' https://fonts.gstatic.com data:; " +
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: blob: data: http://127.0.0.1:* http://localhost:*; " +
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.youtube.com https://s.ytimg.com https://www.google.com https://*.doubleclick.net http://127.0.0.1:* http://localhost:*; " +
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com http://127.0.0.1:* http://localhost:*; " +
+            "font-src 'self' https://fonts.gstatic.com data: http://127.0.0.1:* http://localhost:*; " +
             "frame-src https://www.youtube-nocookie.com https://www.youtube.com https://www.google.com; " +
             "media-src 'self' blob: data: https: http:; " +
-            "img-src 'self' data: https: blob:; " +
-            "connect-src 'self' https: blob:;"
+            "img-src 'self' data: https: blob: http:; " +
+            "connect-src 'self' https: blob: http:;"
           ]
         }
       });
@@ -71,6 +57,10 @@ if (!gotTheLock) {
         createMainWindow();
       }
     });
+  });
+
+  app.on('before-quit', () => {
+    stopLocalServer();
   });
 
   app.on('window-all-closed', () => {

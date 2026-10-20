@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, AlertCircle, Clock, CheckCircle, RotateCcw, ExternalLink, Copy, Check } from 'lucide-react';
+import { Loader2, AlertCircle, Clock, CheckCircle, RotateCcw, ExternalLink, Copy, Check, SkipForward, X } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
 import { EmptyPlayerState } from './EmptyPlayerState';
 
@@ -11,8 +11,12 @@ export const VideoCanvas: React.FC = () => {
     currentSource,
     adapterState,
     countdownRemaining,
+    queue,
+    currentQueueIndex,
     setContainerElement,
-    loadUrl
+    loadUrl,
+    nextTrack,
+    clearSource
   } = usePlayerStore();
 
   useEffect(() => {
@@ -41,6 +45,13 @@ export const VideoCanvas: React.FC = () => {
       navigator.clipboard.writeText(currentSource.canonicalUrl);
       setCopiedLink(true);
       setTimeout(() => setCopiedLink(false), 2000);
+    }
+  };
+
+  const handleOpenExternal = () => {
+    const targetUrl = currentSource?.originalUrl || currentSource?.canonicalUrl;
+    if (targetUrl && window.loopwaveApi?.openExternal) {
+      window.loopwaveApi.openExternal(targetUrl);
     }
   };
 
@@ -92,25 +103,31 @@ export const VideoCanvas: React.FC = () => {
         </div>
       )}
 
-      {/* Error state overlay with Retry & Copy Link */}
+      {/* Error state overlay with Retry, Copy Link, Open Externally, Next in Queue & Dismiss */}
       {isError && (
-        <div className="absolute inset-0 bg-[#080D17]/95 flex flex-col items-center justify-center gap-3 p-6 text-center z-20">
-          <div className="w-12 h-12 rounded-2xl bg-[#FF667D]/15 border border-[#FF667D]/40 flex items-center justify-center">
-            <AlertCircle className="w-6 h-6 text-[#FF667D]" />
+        <div className="absolute inset-0 bg-[#080D17]/95 backdrop-blur-sm flex flex-col items-center justify-center gap-2.5 sm:gap-3 p-4 sm:p-6 text-center z-20 overflow-y-auto max-h-full select-none animate-fadeIn">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-[#FF667D]/15 border border-[#FF667D]/40 flex items-center justify-center shrink-0 shadow-lg shadow-[#FF667D]/10">
+            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF667D]" />
           </div>
-          <h3 className="text-base font-semibold text-[#F5F7FF]">Playback Error</h3>
-          <p className="text-xs text-[#A5B4CF] max-w-md">
+
+          <h3 className="text-sm sm:text-base font-bold text-[#F5F7FF] tracking-tight">
+            Playback Error
+          </h3>
+
+          <p className="text-xs text-[#A5B4CF] max-w-md leading-relaxed px-2">
             {adapterState.error?.message || 'An error prevented this media from playing.'}
           </p>
-          <span className="text-[11px] font-mono text-[#FF667D]/90 bg-[#18243A] px-2.5 py-1 rounded-md border border-[#293750]">
+
+          <span className="text-[11px] font-mono font-medium text-[#FF667D] bg-[#18243A] px-3 py-1 rounded-lg border border-[#FF667D]/30 shrink-0">
             Code: {adapterState.error?.code || 'UNKNOWN'}
           </span>
 
-          <div className="flex items-center gap-2 pt-2">
+          <div className="flex flex-wrap items-center justify-center gap-2 pt-1.5 max-w-full">
             <button
               type="button"
               onClick={handleRetry}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#6547FF] hover:bg-[#7b61ff] text-white text-xs font-semibold shadow-md transition-all active:scale-95"
+              className="h-9 flex items-center gap-1.5 px-4 rounded-xl bg-gradient-to-r from-[#6547FF] to-[#3478FF] hover:from-[#7559ff] hover:to-[#4e8cff] text-white text-xs font-semibold shadow-md transition-all active:scale-95 shrink-0"
+              title="Retry playback"
             >
               <RotateCcw className="w-3.5 h-3.5" />
               <span>Retry</span>
@@ -119,11 +136,45 @@ export const VideoCanvas: React.FC = () => {
             <button
               type="button"
               onClick={handleCopyLink}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium transition-colors"
+              className="h-9 flex items-center gap-1.5 px-3.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium transition-colors shrink-0"
               title="Copy original media link"
             >
               {copiedLink ? <Check className="w-3.5 h-3.5 text-[#12C98A]" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedLink ? 'Copied' : 'Copy Link'}</span>
+            </button>
+
+            {currentSource && (
+              <button
+                type="button"
+                onClick={handleOpenExternal}
+                className="h-9 flex items-center gap-1.5 px-3.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#18D8E8] hover:text-[#52e8f5] border border-[#18D8E8]/40 text-xs font-semibold transition-colors shrink-0"
+                title="Open original video externally"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>{currentSource.sourceType === 'youtube' ? 'Open on YouTube' : 'Open in Browser'}</span>
+              </button>
+            )}
+
+            {currentQueueIndex >= 0 && currentQueueIndex < queue.length - 1 && (
+              <button
+                type="button"
+                onClick={nextTrack}
+                className="h-9 flex items-center gap-1.5 px-3.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#3478FF] hover:text-[#6494ff] border border-[#3478FF]/40 text-xs font-semibold transition-colors shrink-0"
+                title="Skip to next item in queue"
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+                <span>Next in Queue</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={clearSource}
+              className="h-9 flex items-center gap-1.5 px-3.5 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium transition-colors shrink-0"
+              title="Dismiss error and return to idle"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Dismiss</span>
             </button>
           </div>
         </div>

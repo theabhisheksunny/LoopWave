@@ -14,7 +14,7 @@ import { usePlayerStore } from './stores/playerStore';
 import { X } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { currentRoute, setRoute, closeModal } = useNavigationStore();
+  const { currentRoute, closeModal } = useNavigationStore();
   const { loadSettings } = useSettingsStore();
   const { loadAll: loadLibrary } = useLibraryStore();
   const {
@@ -24,8 +24,7 @@ export const App: React.FC = () => {
     seek,
     setVolume,
     setMuted,
-    setLoopMode,
-    loopMode,
+    cycleLoopMode,
     toggleFullscreen
   } = usePlayerStore();
 
@@ -98,9 +97,7 @@ export const App: React.FC = () => {
 
         case 'KeyL':
           e.preventDefault();
-          const nextMode =
-            loopMode === 'off' ? 'one' : loopMode === 'one' ? 'all' : 'off';
-          setLoopMode(nextMode);
+          cycleLoopMode();
           break;
 
         default:
@@ -119,13 +116,12 @@ export const App: React.FC = () => {
     adapterState.currentTime,
     adapterState.volume,
     adapterState.isMuted,
-    loopMode,
+    cycleLoopMode,
     play,
     pause,
     seek,
     setVolume,
     setMuted,
-    setLoopMode,
     toggleFullscreen
   ]);
 

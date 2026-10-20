@@ -14,23 +14,7 @@ import {
   Clock
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
-import { LoopMode } from '../../../shared/types';
-
-function formatTime(seconds: number): string {
-  if (!seconds || isNaN(seconds) || !isFinite(seconds)) return '00:00';
-  const s = Math.floor(seconds);
-  const hrs = Math.floor(s / 3600);
-  const mins = Math.floor((s % 3600) / 60);
-  const secs = s % 60;
-
-  const mm = String(mins).padStart(2, '0');
-  const ss = String(secs).padStart(2, '0');
-
-  if (hrs > 0) {
-    return `${hrs}:${mm}:${ss}`;
-  }
-  return `${mm}:${ss}`;
-}
+import { formatTime } from '../../../shared/defaults';
 
 export const PlayerControls: React.FC = () => {
   const {
@@ -39,6 +23,8 @@ export const PlayerControls: React.FC = () => {
     capabilities,
     loopMode,
     interLoopDelaySeconds,
+    queue,
+    currentQueueIndex,
     play,
     pause,
     stop,
@@ -46,7 +32,7 @@ export const PlayerControls: React.FC = () => {
     setVolume,
     setMuted,
     setPlaybackRate,
-    setLoopMode,
+    cycleLoopMode,
     setInterLoopDelay,
     nextTrack,
     previousTrack,
@@ -58,9 +44,14 @@ export const PlayerControls: React.FC = () => {
   const [isDelayOpen, setIsDelayOpen] = useState(false);
 
   const isPlaying = adapterState.status === 'playing';
+  const isError = adapterState.status === 'error';
+  const isLoading = adapterState.status === 'loading';
   const duration = adapterState.duration || 0;
   const currentTime = adapterState.currentTime || 0;
   const hasMedia = Boolean(currentSource);
+
+  const canGoPrevious = hasMedia && (currentQueueIndex > 0 || (currentQueueIndex === 0 && currentTime > 3));
+  const canGoNext = hasMedia && queue.length > 0 && (currentQueueIndex < queue.length - 1 || loopMode === 'all');
 
   const speeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0];
   const delayPresets = [0, 1, 2, 3, 5, 10];
@@ -73,15 +64,6 @@ export const PlayerControls: React.FC = () => {
   const handleVolumeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value, 10);
     setVolume(val);
-  };
-
-  const cycleLoopMode = () => {
-    const next: Record<LoopMode, LoopMode> = {
-      off: 'one',
-      one: 'all',
-      all: 'off'
-    };
-    setLoopMode(next[loopMode]);
   };
 
   return (
@@ -98,8 +80,8 @@ export const PlayerControls: React.FC = () => {
             step={0.1}
             value={currentTime}
             onChange={handleSeekChange}
-            disabled={!capabilities.supportsSeeking || duration === 0}
-            className="w-full h-1.5 rounded-full bg-[#18243A] appearance-none cursor-pointer focus:outline-none accent-[#18D8E8] group-hover:h-2 transition-all"
+            disabled={!capabilities.supportsSeeking || duration === 0 || adapterState.status === 'error' || adapterState.status === 'loading'}
+            className="w-full h-1.5 rounded-full bg-[#18243A] appearance-none cursor-pointer focus:outline-none accent-[#18D8E8] group-hover:h-2 transition-all disabled:opacity-30 disabled:cursor-not-allowed"
             aria-label="Seek timeline"
           />
         </div>
@@ -115,9 +97,9 @@ export const PlayerControls: React.FC = () => {
           ROW 2: Loop Mode & Delay, Transport Controls (Prev, Focal Play/Pause, Next, Stop),
                  Volume, Speed Selector, PiP, Fullscreen
          ========================================================================= */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pt-0.5">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-0.5">
         {/* Left: Loop Mode & Inter-loop Delay */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-center sm:justify-start order-2 sm:order-1 shrink-0">
           {/* Loop Mode Cycle Button */}
           <button
             type="button"
@@ -192,14 +174,20 @@ export const PlayerControls: React.FC = () => {
         </div>
 
         {/* Center: Transport Controls with Prominent Primary Play/Pause Button */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-center gap-2 order-1 sm:order-2 shrink-0">
           {/* Previous Track */}
           <button
             type="button"
             onClick={previousTrack}
-            disabled={!hasMedia}
-            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
-            title={hasMedia ? 'Previous track' : 'No media loaded'}
+            disabled={!canGoPrevious}
+            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title={
+              !hasMedia
+                ? 'No media loaded'
+                : canGoPrevious
+                ? 'Previous track'
+                : 'No previous track'
+            }
             aria-label="Previous track"
           >
             <SkipBack className="w-4 h-4" />
@@ -209,9 +197,19 @@ export const PlayerControls: React.FC = () => {
           <button
             type="button"
             onClick={isPlaying ? pause : play}
-            disabled={!hasMedia}
-            className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#6547FF] via-[#3478FF] to-[#18D8E8] hover:scale-105 active:scale-95 text-white flex items-center justify-center disabled:opacity-30 transition-all glow-focal-play shadow-lg"
-            title={hasMedia ? (isPlaying ? 'Pause (Space)' : 'Play (Space)') : 'No media loaded'}
+            disabled={!hasMedia || adapterState.status === 'error' || adapterState.status === 'loading'}
+            className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#6547FF] via-[#3478FF] to-[#18D8E8] hover:scale-105 active:scale-95 text-white flex items-center justify-center disabled:opacity-30 disabled:pointer-events-none transition-all glow-focal-play shadow-lg"
+            title={
+              !hasMedia
+                ? 'No media loaded'
+                : adapterState.status === 'error'
+                ? 'Playback failed (Retry or Open Externally)'
+                : adapterState.status === 'loading'
+                ? 'Loading media...'
+                : isPlaying
+                ? 'Pause (Space)'
+                : 'Play (Space)'
+            }
             aria-label={isPlaying ? 'Pause' : 'Play'}
           >
             {isPlaying ? (
@@ -226,8 +224,14 @@ export const PlayerControls: React.FC = () => {
             type="button"
             onClick={stop}
             disabled={!hasMedia}
-            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
-            title={hasMedia ? 'Stop playback' : 'No media loaded'}
+            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title={
+              !hasMedia
+                ? 'No media loaded'
+                : isError
+                ? 'Dismiss error and reset'
+                : 'Stop playback'
+            }
             aria-label="Stop playback"
           >
             <Square className="w-4 h-4" />
@@ -237,9 +241,15 @@ export const PlayerControls: React.FC = () => {
           <button
             type="button"
             onClick={nextTrack}
-            disabled={!hasMedia}
-            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
-            title={hasMedia ? 'Next track' : 'No media loaded'}
+            disabled={!canGoNext}
+            className="p-2 rounded-xl text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title={
+              !hasMedia
+                ? 'No media loaded'
+                : canGoNext
+                ? 'Next track'
+                : 'No next track in queue'
+            }
             aria-label="Next track"
           >
             <SkipForward className="w-4 h-4" />
@@ -247,7 +257,7 @@ export const PlayerControls: React.FC = () => {
         </div>
 
         {/* Right: Volume, Playback Speed, PiP, Fullscreen */}
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2 sm:gap-2.5 w-full sm:w-auto justify-center sm:justify-end order-3 shrink-0">
           {/* Volume Control */}
           <div className="flex items-center gap-1.5 group">
             <button
@@ -289,10 +299,12 @@ export const PlayerControls: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsSpeedOpen(!isSpeedOpen)}
-              disabled={!capabilities.supportsSpeed || !hasMedia}
-              className="px-2 py-1 rounded-lg text-xs font-mono text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] border border-[#293750] disabled:opacity-30 transition-colors"
+              disabled={!capabilities.supportsSpeed || !hasMedia || isError || isLoading}
+              className="px-2 py-1 rounded-lg text-xs font-mono text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] border border-[#293750] disabled:opacity-30 disabled:pointer-events-none transition-colors"
               title={
-                capabilities.supportsSpeed && hasMedia
+                isError
+                  ? 'Speed adjustment unavailable during error'
+                  : capabilities.supportsSpeed && hasMedia
                   ? `Playback speed: ${adapterState.playbackRate}x`
                   : 'Speed adjustment not supported'
               }
@@ -327,10 +339,12 @@ export const PlayerControls: React.FC = () => {
           <button
             type="button"
             onClick={togglePiP}
-            disabled={!capabilities.supportsPiP || !hasMedia}
-            className="p-1.5 rounded-lg text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
+            disabled={!capabilities.supportsPiP || !hasMedia || isError || isLoading}
+            className="p-1.5 rounded-lg text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 disabled:pointer-events-none transition-colors"
             title={
-              capabilities.supportsPiP && hasMedia
+              isError
+                ? 'PiP unavailable during error'
+                : capabilities.supportsPiP && hasMedia
                 ? 'Picture in Picture'
                 : 'PiP not supported for this source'
             }
@@ -343,9 +357,15 @@ export const PlayerControls: React.FC = () => {
           <button
             type="button"
             onClick={toggleFullscreen}
-            disabled={!hasMedia}
-            className="p-1.5 rounded-lg text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
-            title={hasMedia ? 'Fullscreen (F)' : 'No media loaded'}
+            disabled={!hasMedia || isError}
+            className="p-1.5 rounded-lg text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 disabled:pointer-events-none transition-colors"
+            title={
+              !hasMedia
+                ? 'No media loaded'
+                : isError
+                ? 'Fullscreen unavailable during error'
+                : 'Fullscreen (F)'
+            }
             aria-label="Fullscreen"
           >
             <Maximize className="w-4 h-4" />

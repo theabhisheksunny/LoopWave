@@ -21,7 +21,8 @@ interface LibraryState {
   toggleFavorite: (id: string) => Promise<void>;
   updateItemPosition: (id: string, positionSeconds: number) => Promise<void>;
 
-  saveCollection: (name: string, description?: string) => Promise<void>;
+  saveCollection: (name: string, description?: string, id?: string) => Promise<void>;
+  updateItemCollection: (id: string, collectionId: string) => Promise<void>;
   deleteCollection: (id: string) => Promise<void>;
   clearLibrary: () => Promise<void>;
 
@@ -153,16 +154,40 @@ export const useLibraryStore = create<LibraryState>((set, get) => ({
     }
   },
 
-  saveCollection: async (name: string, description?: string) => {
+  saveCollection: async (name: string, description?: string, id?: string) => {
     try {
       if (typeof window !== 'undefined' && window.loopwaveApi) {
-        const res = await window.loopwaveApi.saveCollection({ name, description });
+        const res = await window.loopwaveApi.saveCollection({ id, name, description });
         if (res.success && res.collection) {
-          set({ collections: [...get().collections, res.collection] });
+          if (id) {
+            set({
+              collections: get().collections.map((c) => (c.id === id ? res.collection! : c))
+            });
+          } else {
+            set({ collections: [...get().collections, res.collection] });
+          }
         }
       }
     } catch (err) {
       console.error('Failed to save collection:', err);
+    }
+  },
+
+  updateItemCollection: async (id: string, collectionId: string) => {
+    const item = get().items.find((i) => i.id === id);
+    if (!item) return;
+
+    const updated = { ...item, collectionId };
+    set({
+      items: get().items.map((i) => (i.id === id ? updated : i))
+    });
+
+    try {
+      if (typeof window !== 'undefined' && window.loopwaveApi) {
+        await window.loopwaveApi.saveLibraryItem(updated);
+      }
+    } catch (err) {
+      console.error('Failed to update item collection:', err);
     }
   },
 

@@ -102,11 +102,11 @@ describe('LoopController', () => {
     // End of item 1 -> should advance to item 2
     controller.handlePlaybackEnded();
     expect(controller.getCurrentQueueIndex()).toBe(1);
-    expect(playNextCallback).toHaveBeenCalledWith(queue[1]);
+    expect(playNextCallback).toHaveBeenCalledWith(queue[1], 1);
 
     // End of item 2 -> should loop back to item 1 (index 0)
     controller.handlePlaybackEnded();
     expect(controller.getCurrentQueueIndex()).toBe(0);
-    expect(playNextCallback).toHaveBeenCalledWith(queue[0]);
+    expect(playNextCallback).toHaveBeenCalledWith(queue[0], 0);
   });
 });

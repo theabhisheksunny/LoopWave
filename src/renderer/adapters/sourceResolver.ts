@@ -1,4 +1,4 @@
-import { ResolvedSource, SourceType } from '../../shared/types';
+import { ResolvedSource } from '../../shared/types';
 
 function hashString(str: string): string {
   let hash = 0;

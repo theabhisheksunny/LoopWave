@@ -3,7 +3,6 @@ import {
   Minus,
   Square,
   X,
-  ShieldAlert,
   Radio,
   Lock
 } from 'lucide-react';
@@ -12,7 +11,7 @@ import { useNavigationStore } from '../../stores/navigationStore';
 
 export const TitleBar: React.FC = () => {
   const { settings } = useSettingsStore();
-  const { currentRoute, setRoute } = useNavigationStore();
+  const { setRoute } = useNavigationStore();
 
   const handleMinimize = () => {
     window.loopwaveApi?.minimizeWindow();

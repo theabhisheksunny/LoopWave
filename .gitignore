@@ -7,3 +7,10 @@ release/
 *.log
 .env
 .env.local
+
+# Playwright & test output artifacts
+test-results/
+playwright-report/
+blob-report/
+coverage/
+*.tmp

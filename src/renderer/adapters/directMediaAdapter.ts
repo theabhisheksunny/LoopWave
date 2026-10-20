@@ -58,7 +58,7 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
     this.mediaElement = video;
     container.appendChild(video);
 
-    this.bindMediaEvents(video, options);
+    this.bindMediaEvents(video);
 
     if (source.sourceType === 'hls') {
       if (Hls.isSupported()) {
@@ -141,10 +141,7 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
     }
   }
 
-  private bindMediaEvents(
-    video: HTMLVideoElement,
-    options?: { autoPlay?: boolean; initialTime?: number }
-  ): void {
+  private bindMediaEvents(video: HTMLVideoElement): void {
     video.addEventListener('loadedmetadata', () => {
       if (this.isDisposed) return;
       this.updateState({

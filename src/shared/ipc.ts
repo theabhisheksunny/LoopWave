@@ -82,11 +82,23 @@ export interface LoopWaveApi {
   saveCollection: (collection: { id?: string; name: string; description?: string }) => Promise<{ success: boolean; collection?: Collection; error?: string }>;
   deleteCollection: (id: string) => Promise<{ success: boolean; error?: string }>;
   getAnalyticsSummary: (filter?: { startDate?: string; endDate?: string; videoId?: string }) => Promise<AnalyticsSummary>;
-  getAnalyticsEvents: (filter?: { sessionId?: string; videoId?: string; limit?: number }) => Promise<AnalyticsEvent[]>;
+  getAnalyticsEvents: (filter?: {
+    sessionId?: string;
+    videoId?: string;
+    startDate?: string;
+    endDate?: string;
+    eventType?: string;
+    limit?: number;
+  }) => Promise<AnalyticsEvent[]>;
   recordAnalyticsSession: (session: PlaybackSession) => Promise<{ success: boolean }>;
   recordAnalyticsEvent: (event: AnalyticsEvent) => Promise<{ success: boolean }>;
   clearAnalytics: () => Promise<{ success: boolean }>;
-  exportData: (options: { type: 'json' | 'csv'; dataType: 'analytics' | 'library' | 'all' }) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; content?: string }>;
+  exportData: (options: {
+    type: 'json' | 'csv';
+    dataType: 'analytics' | 'library' | 'all';
+    startDate?: string;
+    endDate?: string;
+  }) => Promise<{ success: boolean; filePath?: string; canceled?: boolean; content?: string }>;
   importData: (content: string, type: 'library' | 'json') => Promise<{ success: boolean; importedCount?: number; error?: string }>;
   inspectUrl: (url: string) => Promise<UrlInspectionResult>;
   openExternal: (url: string) => Promise<{ success: boolean }>;

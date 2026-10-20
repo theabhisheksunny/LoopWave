@@ -1,4 +1,4 @@
-import { app, shell, WebContents } from 'electron';
+import { shell, WebContents } from 'electron';
 import http from 'http';
 import https from 'https';
 import { URL } from 'url';
@@ -92,10 +92,10 @@ export function applyWebContentsSecurity(contents: WebContents): void {
 
   // Block in-app navigation away from application shell
   contents.on('will-navigate', (event, navigationUrl) => {
-    // Allow local dev server or app file navigation only
+    // Allow local dev server, local loopback server, or app file navigation only
     if (
-      navigationUrl.startsWith('http://localhost:5173') ||
-      navigationUrl.startsWith('http://127.0.0.1:5173') ||
+      navigationUrl.startsWith('http://localhost:') ||
+      navigationUrl.startsWith('http://127.0.0.1:') ||
       navigationUrl.startsWith('file://')
     ) {
       return;

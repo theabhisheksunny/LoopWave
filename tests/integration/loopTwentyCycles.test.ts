@@ -8,7 +8,7 @@ class ShortFixtureAdapter extends BasePlaybackAdapter {
   readonly id = 'short-fixture';
   readonly name = 'Short 2-Second Test Fixture';
 
-  canHandle(source: ResolvedSource): boolean {
+  canHandle(_source: ResolvedSource): boolean {
     return true;
   }
 
@@ -22,7 +22,7 @@ class ShortFixtureAdapter extends BasePlaybackAdapter {
     };
   }
 
-  async load(source: ResolvedSource, container: HTMLElement): Promise<void> {
+  async load(_source: ResolvedSource, _container: HTMLElement): Promise<void> {
     this.updateState({ status: 'ready', duration: 2 });
   }
 

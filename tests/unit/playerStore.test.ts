@@ -67,6 +67,28 @@ describe('PlayerStore Queue & State Management', () => {
     expect(q[0].source.videoId).toBe('v2');
   });
 
+  it('moves item to play next immediately after the current active track', () => {
+    usePlayerStore.getState().addToQueue(sampleSource1); // 0
+    usePlayerStore.getState().addToQueue(sampleSource2); // 1
+    usePlayerStore.getState().addToQueue(sampleSource3); // 2
+
+    // Set current active track to index 0 (sampleSource1)
+    usePlayerStore.setState({ currentQueueIndex: 0 });
+
+    // Mark sampleSource3 (index 2) to play next
+    usePlayerStore.getState().playNext(2);
+
+    const q = usePlayerStore.getState().queue;
+    expect(q.length).toBe(3);
+    // Track 0 remains sampleSource1 (current active)
+    expect(q[0].source.videoId).toBe('v1');
+    // Track 1 should now be sampleSource3
+    expect(q[1].source.videoId).toBe('v3');
+    // Track 2 should now be sampleSource2
+    expect(q[2].source.videoId).toBe('v2');
+    expect(usePlayerStore.getState().currentQueueIndex).toBe(0);
+  });
+
   it('updates loop mode and delay preferences', () => {
     usePlayerStore.getState().setLoopMode('one');
     expect(usePlayerStore.getState().loopMode).toBe('one');

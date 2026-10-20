@@ -2,7 +2,6 @@ import {
   ResolvedSource,
   AdapterCapabilities,
   AdapterState,
-  PlayerStatus,
   PlayerError
 } from '../../shared/types';
 
@@ -31,6 +30,7 @@ export interface PlaybackAdapter {
   setMuted(muted: boolean): void;
   setPlaybackRate(rate: number): void;
 
+  clearListeners(): void;
   onStateChange(listener: StateChangeListener): () => void;
   onEvent(listener: EventListener): () => void;
 
@@ -73,6 +73,11 @@ export abstract class BasePlaybackAdapter implements PlaybackAdapter {
 
   public getState(): AdapterState {
     return { ...this.state };
+  }
+
+  public clearListeners(): void {
+    this.stateListeners.clear();
+    this.eventListeners.clear();
   }
 
   public onStateChange(listener: StateChangeListener): () => void {

@@ -10,7 +10,8 @@ if (!globalThis.crypto.randomUUID) {
   let counter = 0;
   globalThis.crypto.randomUUID = () => {
     counter++;
-    return `test-uuid-${counter}-${Math.random().toString(36).substring(2, 9)}`;
+    const hex = counter.toString(16).padStart(12, '0');
+    return `00000000-0000-0000-0000-${hex}` as `${string}-${string}-${string}-${string}-${string}`;
   };
 }
 
@@ -46,8 +47,19 @@ Object.defineProperty(window, 'loopwaveApi', {
     clearAnalytics: vi.fn().mockResolvedValue({ success: true }),
     exportData: vi.fn().mockResolvedValue({ success: true }),
     importData: vi.fn().mockResolvedValue({ success: true }),
+    getStoragePolicy: vi.fn().mockResolvedValue({
+      privateMode: false,
+      analyticsPersistenceEnabled: true,
+      retentionDays: 30,
+      databasePath: 'C:\\Users\\MockUser\\AppData\\Roaming\\LoopWave\\loopwave.db',
+      approximateDbSizeBytes: 65536,
+      activeSessionStorageType: 'SQLite-File'
+    }),
     inspectUrl: vi.fn().mockResolvedValue({ valid: true, mimeType: 'video/mp4' }),
     openExternal: vi.fn().mockResolvedValue({ success: true }),
+    minimizeWindow: vi.fn().mockResolvedValue(undefined),
+    maximizeWindow: vi.fn().mockResolvedValue(undefined),
+    closeWindow: vi.fn().mockResolvedValue(undefined),
     appInfo: {
       version: '1.0.0',
       platform: 'win32',

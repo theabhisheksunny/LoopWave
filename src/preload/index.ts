@@ -11,6 +11,7 @@ import type {
 } from '../shared/types';
 import type { LoopWaveApi } from '../shared/ipc';
 
+// Defined directly in preload because Electron's sandboxed preload (sandbox: true) does not allow relative require() calls
 const IPC_CHANNELS = {
   SETTINGS_GET: 'loopwave:settings:get',
   SETTINGS_SAVE: 'loopwave:settings:save',

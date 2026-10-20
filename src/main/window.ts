@@ -1,6 +1,7 @@
 import { BrowserWindow, app } from 'electron';
 import path from 'path';
 import { applyWebContentsSecurity } from './security';
+import { startLocalServer } from './server';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -36,11 +37,17 @@ export function createMainWindow(): BrowserWindow {
   if (isDev && process.env.VITE_DEV_SERVER_URL) {
     mainWindow.loadURL(process.env.VITE_DEV_SERVER_URL);
   } else {
-    // In production or built mode, load the bundled HTML
-    const indexPath = path.join(__dirname, '../renderer/index.html');
-    mainWindow.loadFile(indexPath).catch((err) => {
-      console.error('Failed to load local index.html:', err);
-    });
+    // Serve renderer bundle via local loopback server to guarantee legitimate HTTP origin for embeds
+    const rendererDir = path.join(__dirname, '../renderer');
+    startLocalServer(rendererDir)
+      .then((baseUrl) => {
+        mainWindow?.loadURL(baseUrl);
+      })
+      .catch((err) => {
+        console.error('Failed to start local server, falling back to file:// loadFile:', err);
+        const indexPath = path.join(__dirname, '../renderer/index.html');
+        mainWindow?.loadFile(indexPath);
+      });
   }
 
   mainWindow.on('closed', () => {

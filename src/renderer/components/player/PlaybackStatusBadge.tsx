@@ -1,8 +1,8 @@
 import React from 'react';
-import { PlaybackStatus } from '../../../shared/types';
+import { PlayerStatus } from '../../../shared/types';
 
 interface PlaybackStatusBadgeProps {
-  status: PlaybackStatus | 'idle';
+  status: PlayerStatus | 'idle';
   className?: string;
 }
 

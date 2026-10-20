@@ -1,11 +1,9 @@
 import React from 'react';
 import {
   Radio,
-  CheckCircle,
   ShieldCheck,
   Cpu,
   Layers,
-  ExternalLink,
   Info
 } from 'lucide-react';
 import { AdapterRegistry } from '../adapters/adapterRegistry';

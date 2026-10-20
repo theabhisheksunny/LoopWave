@@ -8,7 +8,7 @@ class MockPlaybackAdapter extends BasePlaybackAdapter {
   readonly id = 'mock-adapter';
   readonly name = 'Mock Test Adapter';
 
-  canHandle(source: ResolvedSource): boolean {
+  canHandle(_source: ResolvedSource): boolean {
     return true;
   }
 
@@ -22,7 +22,7 @@ class MockPlaybackAdapter extends BasePlaybackAdapter {
     };
   }
 
-  async load(source: ResolvedSource, container: HTMLElement, options?: any): Promise<void> {
+  async load(_source: ResolvedSource, _container: HTMLElement, _options?: any): Promise<void> {
     this.updateState({ status: 'ready', duration: 100 });
   }
 

@@ -9,6 +9,12 @@ export class AnalyticsService {
   private static instance: AnalyticsService;
   private currentBufferingStartMs: number | null = null;
   private recordedEventIds: Set<string> = new Set();
+  private lastRecordedEvent: {
+    sessionId: string;
+    eventType: AnalyticsEventType;
+    errorCode?: string;
+    timeMs: number;
+  } | null = null;
 
   public static getInstance(): AnalyticsService {
     if (!AnalyticsService.instance) {
@@ -26,7 +32,24 @@ export class AnalyticsService {
       errorMessage?: string;
       customData?: Record<string, unknown>;
     }
-  ): Promise<AnalyticsEvent> {
+  ): Promise<AnalyticsEvent | null> {
+    const now = performance.now();
+
+    // Deduplication & idempotency guard against multiple callbacks firing for same event
+    if (this.lastRecordedEvent && this.lastRecordedEvent.sessionId === session.sessionId) {
+      if (
+        this.lastRecordedEvent.eventType === eventType &&
+        (eventType === 'playback_failed' ||
+          eventType === 'playback_completed' ||
+          eventType === 'playback_paused' ||
+          now - this.lastRecordedEvent.timeMs < 1000)
+      ) {
+        if (eventType !== 'playback_failed' || this.lastRecordedEvent.errorCode === metadata?.errorCode) {
+          return null;
+        }
+      }
+    }
+
     const eventId = crypto.randomUUID();
     const timestamp = new Date().toISOString();
 
@@ -54,6 +77,12 @@ export class AnalyticsService {
     };
 
     this.recordedEventIds.add(eventId);
+    this.lastRecordedEvent = {
+      sessionId: session.sessionId,
+      eventType,
+      errorCode: metadata?.errorCode,
+      timeMs: now
+    };
 
     if (typeof window !== 'undefined' && window.loopwaveApi) {
       try {
@@ -103,6 +132,9 @@ export class AnalyticsService {
   public async getEvents(filter?: {
     sessionId?: string;
     videoId?: string;
+    startDate?: string;
+    endDate?: string;
+    eventType?: string;
     limit?: number;
   }): Promise<AnalyticsEvent[]> {
     if (typeof window !== 'undefined' && window.loopwaveApi) {

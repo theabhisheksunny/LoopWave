@@ -11,18 +11,8 @@ export const QueuePanel: React.FC = () => {
     removeFromQueue,
     reorderQueue,
     clearQueue,
-    setQueue
+    shuffleQueue
   } = usePlayerStore();
-
-  const handleShuffle = () => {
-    if (queue.length <= 1) return;
-    const shuffled = [...queue];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    setQueue(shuffled);
-  };
 
   return (
     <div className="h-full flex flex-col bg-[#111B2B] border border-[#293750] rounded-2xl p-3.5 shadow-xl select-none">
@@ -39,7 +29,7 @@ export const QueuePanel: React.FC = () => {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={handleShuffle}
+            onClick={shuffleQueue}
             disabled={queue.length <= 1}
             className="p-1.5 rounded-lg text-[#A5B4CF] hover:text-[#F5F7FF] hover:bg-[#18243A] disabled:opacity-30 transition-colors"
             title="Shuffle queue"

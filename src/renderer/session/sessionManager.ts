@@ -164,10 +164,33 @@ export class PlaybackSessionManager {
   }
 
   /**
-   * Records failure for the current session.
+   * Records failure for the current session or initialization attempt.
    */
   public recordFailure(errorCode: string): PlaybackSession | null {
-    if (!this.currentSession) return null;
+    if (this.currentSession && this.currentSession.completionStatus === 'failed') {
+      return { ...this.currentSession };
+    }
+
+    if (!this.currentSession) {
+      if (!this.currentVideoId) return null;
+      const sessionId = crypto.randomUUID();
+      const now = new Date().toISOString();
+      this.currentSession = {
+        sessionId,
+        videoId: this.currentVideoId,
+        cycleNumber: this.currentCycleNumber || 1,
+        startedAt: now,
+        endedAt: now,
+        watchedSeconds: 0,
+        completionStatus: 'failed',
+        errorCode,
+        sourceType: this.currentSourceType
+      };
+      const finalSession = { ...this.currentSession };
+      this.notify();
+      return finalSession;
+    }
+
     return this.closeCurrentSession('failed', errorCode);
   }
 

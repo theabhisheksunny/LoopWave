@@ -187,7 +187,17 @@ export class DatabaseManager {
   }
 
   public saveLibraryItem(
-    itemInput: Omit<LibraryItem, 'id' | 'createdAt' | 'updatedAt'> & { id?: string }
+    itemInput: {
+      videoId: string;
+      url: string;
+      sourceType: any;
+      title: string;
+      thumbnailUrl?: string;
+      collectionId?: string;
+      isFavorite?: boolean;
+      savedPositionSeconds?: number;
+      id?: string;
+    }
   ): LibraryItem {
     if (!this.db) throw new Error('Database not initialized');
 
@@ -458,9 +468,23 @@ export class DatabaseManager {
 
       // Count buffering events
       let bufferingCount = 0;
-      const bufStmt = this.db.prepare(
-        "SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'buffering_started'"
-      );
+      let bufQuery = "SELECT COUNT(*) as count FROM analytics_events WHERE event_type = 'buffering_started'";
+      const bufParams: any[] = [];
+      if (filter?.startDate) {
+        bufQuery += ' AND timestamp >= ?';
+        bufParams.push(filter.startDate);
+      }
+      if (filter?.endDate) {
+        bufQuery += ' AND timestamp <= ?';
+        bufParams.push(filter.endDate);
+      }
+      if (filter?.videoId) {
+        bufQuery += ' AND video_id = ?';
+        bufParams.push(filter.videoId);
+      }
+
+      const bufStmt = this.db.prepare(bufQuery);
+      bufStmt.bind(bufParams);
       if (bufStmt.step()) {
         const r = bufStmt.getAsObject();
         bufferingCount = Number(r.count) || 0;
@@ -504,6 +528,9 @@ export class DatabaseManager {
   public getAnalyticsEvents(filter?: {
     sessionId?: string;
     videoId?: string;
+    startDate?: string;
+    endDate?: string;
+    eventType?: string;
     limit?: number;
   }): AnalyticsEvent[] {
     if (!this.db) return [];
@@ -519,9 +546,21 @@ export class DatabaseManager {
         query += ' AND video_id = ?';
         params.push(filter.videoId);
       }
+      if (filter?.startDate) {
+        query += ' AND timestamp >= ?';
+        params.push(filter.startDate);
+      }
+      if (filter?.endDate) {
+        query += ' AND timestamp <= ?';
+        params.push(filter.endDate);
+      }
+      if (filter?.eventType && filter.eventType !== 'all') {
+        query += ' AND event_type = ?';
+        params.push(filter.eventType);
+      }
 
       query += ' ORDER BY timestamp DESC';
-      query += ` LIMIT ${filter?.limit || 200}`;
+      query += ` LIMIT ${filter?.limit || 500}`;
 
       const stmt = this.db.prepare(query);
       stmt.bind(params);
@@ -620,7 +659,7 @@ export class DatabaseManager {
     }
   }
 
-  public exportAll(): {
+  public exportAll(filter?: { startDate?: string; endDate?: string }): {
     settings: AppSettings;
     library: LibraryItem[];
     collections: Collection[];
@@ -632,18 +671,34 @@ export class DatabaseManager {
       settings: this.getSettings(),
       library: this.getLibrary(),
       collections: this.getCollections(),
-      sessions: this.getAllSessions(),
-      events: this.getAnalyticsEvents({ limit: 5000 }),
+      sessions: this.getAllSessions(filter),
+      events: this.getAnalyticsEvents({
+        startDate: filter?.startDate,
+        endDate: filter?.endDate,
+        limit: 5000
+      }),
       exportedAt: new Date().toISOString()
     };
   }
 
-  private getAllSessions(): PlaybackSession[] {
+  public getAllSessions(filter?: { startDate?: string; endDate?: string }): PlaybackSession[] {
     if (!this.db) return [];
     try {
-      const stmt = this.db.prepare(
-        'SELECT * FROM analytics_sessions ORDER BY started_at DESC LIMIT 5000'
-      );
+      let query = 'SELECT * FROM analytics_sessions WHERE 1=1';
+      const params: any[] = [];
+
+      if (filter?.startDate) {
+        query += ' AND started_at >= ?';
+        params.push(filter.startDate);
+      }
+      if (filter?.endDate) {
+        query += ' AND started_at <= ?';
+        params.push(filter.endDate);
+      }
+
+      query += ' ORDER BY started_at DESC LIMIT 5000';
+      const stmt = this.db.prepare(query);
+      stmt.bind(params);
       const list: PlaybackSession[] = [];
       while (stmt.step()) {
         const row = stmt.getAsObject();

@@ -46,7 +46,7 @@ npm run build
 node tests/e2e/electronE2e.mjs
 ```
 
-The script will launch Electron, execute all 9 test scenarios (including YouTube Shorts `n2YGWiRRxEs` and direct media), save screenshots into `docs/screenshots/`, output test statistics, and exit cleanly.
+The script will launch Electron, execute all 15 test scenarios (including YouTube Shorts `n2YGWiRRxEs` and direct media), output test statistics, and write results to `test-results/e2e_results.json` without cluttering tracked repository directories.
 
 ---
 

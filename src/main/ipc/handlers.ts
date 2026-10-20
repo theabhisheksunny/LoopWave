@@ -122,19 +122,23 @@ export function registerIpcHandlers(dbManager: DatabaseManager): void {
   ipcMain.handle(IPC_CHANNELS.DATA_EXPORT, async (event, options) => {
     try {
       const window = BrowserWindow.fromWebContents(event.sender);
-      const { type = 'json', dataType = 'all' } = options || {};
+      const { type = 'json', dataType = 'all', startDate, endDate } = options || {};
 
       let exportContent = '';
       let defaultFileName = `loopwave-export-${Date.now()}`;
 
       if (type === 'json') {
         defaultFileName += '.json';
-        const dump = dbManager.exportAll();
+        const dump = dbManager.exportAll({ startDate, endDate });
         if (dataType === 'library') {
           exportContent = JSON.stringify(dump.library, null, 2);
         } else if (dataType === 'analytics') {
           exportContent = JSON.stringify(
-            { sessions: dump.sessions, events: dump.events },
+            {
+              summary: dbManager.getAnalyticsSummary({ startDate, endDate }),
+              sessions: dump.sessions,
+              events: dump.events
+            },
             null,
             2
           );
@@ -144,11 +148,11 @@ export function registerIpcHandlers(dbManager: DatabaseManager): void {
       } else {
         // CSV export
         defaultFileName += '.csv';
-        const summary = dbManager.getAnalyticsSummary();
-        const events = dbManager.getAnalyticsEvents({ limit: 5000 });
-        let csv = 'eventId,sessionId,videoId,eventType,timestamp,positionSeconds,bufferDurationMs,errorCode\n';
+        const events = dbManager.getAnalyticsEvents({ startDate, endDate, limit: 5000 });
+        let csv = 'eventId,sessionId,videoId,eventType,timestamp,positionSeconds,bufferDurationMs,errorCode,errorMessage\n';
         for (const ev of events) {
-          csv += `"${ev.eventId}","${ev.sessionId}","${ev.videoId}","${ev.eventType}","${ev.timestamp}",${ev.positionSeconds ?? ''},${ev.bufferDurationMs ?? ''},"${ev.errorCode ?? ''}"\n`;
+          const esc = (val?: string) => `"${(val || '').replace(/"/g, '""')}"`;
+          csv += `${esc(ev.eventId)},${esc(ev.sessionId)},${esc(ev.videoId)},${esc(ev.eventType)},${esc(ev.timestamp)},${ev.positionSeconds ?? ''},${ev.bufferDurationMs ?? ''},${esc(ev.errorCode)},${esc(ev.errorMessage)}\n`;
         }
         exportContent = csv;
       }
@@ -179,7 +183,7 @@ export function registerIpcHandlers(dbManager: DatabaseManager): void {
   });
 
   // --- Import Data ---
-  ipcMain.handle(IPC_CHANNELS.DATA_IMPORT, async (_, { content, type }) => {
+  ipcMain.handle(IPC_CHANNELS.DATA_IMPORT, async (_, { content, type: _type }) => {
     try {
       if (typeof content !== 'string' || !content.trim()) {
         return { success: false, error: 'Empty content' };

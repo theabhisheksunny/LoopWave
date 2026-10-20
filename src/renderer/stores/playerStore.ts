@@ -41,20 +41,25 @@ interface PlayerStoreState {
   play: () => Promise<void>;
   pause: () => void;
   stop: () => void;
+  clearSource: () => void;
   seek: (seconds: number) => void;
   setVolume: (volume: number) => void;
   setMuted: (muted: boolean) => void;
   setPlaybackRate: (rate: number) => void;
   setLoopMode: (mode: LoopMode) => void;
+  cycleLoopMode: () => void;
   setInterLoopDelay: (seconds: number) => void;
 
   // Queue actions
   addToQueue: (source: ResolvedSource) => void;
   removeFromQueue: (index: number) => void;
   playQueueItem: (index: number) => Promise<void>;
+  playNext: (index: number) => void;
   nextTrack: () => Promise<void>;
   previousTrack: () => Promise<void>;
   clearQueue: () => void;
+  setQueue: (items: QueueItem[]) => void;
+  shuffleQueue: () => void;
   reorderQueue: (fromIndex: number, toIndex: number) => void;
 
   // Special
@@ -64,6 +69,9 @@ interface PlayerStoreState {
 
 const sessionManager = new PlaybackSessionManager();
 const analyticsService = AnalyticsService.getInstance();
+
+let stateUnsubscribe: (() => void) | null = null;
+let eventUnsubscribe: (() => void) | null = null;
 
 export const usePlayerStore = create<PlayerStoreState>((set, get) => {
   const loopController = new LoopController(sessionManager, {
@@ -76,7 +84,8 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
         });
       }
     },
-    onPlayNextQueueItem: async (nextItem) => {
+    onPlayNextQueueItem: async (nextItem, nextIndex) => {
+      set({ currentQueueIndex: nextIndex });
       await get().loadSource(nextItem.source, true);
     },
     onDelayTick: (secondsRemaining) => {
@@ -158,6 +167,16 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
 
       if (prevAdapter) {
         prevAdapter.dispose();
+        prevAdapter.clearListeners();
+      }
+
+      if (stateUnsubscribe) {
+        stateUnsubscribe();
+        stateUnsubscribe = null;
+      }
+      if (eventUnsubscribe) {
+        eventUnsubscribe();
+        eventUnsubscribe = null;
       }
 
       const registry = AdapterRegistry.getInstance();
@@ -196,13 +215,25 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       sm.initTrack(source);
       lc.setCurrentSource(source);
 
-      adapter.onStateChange((state) => {
+      let prevStatus: string | null = null;
+      stateUnsubscribe = adapter.onStateChange((state) => {
+        const isStatusChange = state.status !== prevStatus;
+        const currentPrevStatus = prevStatus;
+        prevStatus = state.status;
+
         set({ adapterState: state });
+
+        if (!isStatusChange) return;
 
         const session = sm.getCurrentSession();
         if (state.status === 'playing') {
-          const s = sm.startSession();
-          as.recordEvent('playback_started', s, { positionSeconds: state.currentTime });
+          if (!session || currentPrevStatus === 'loading' || currentPrevStatus === 'idle') {
+            const s = sm.startSession();
+            as.recordEvent('playback_started', s, { positionSeconds: state.currentTime });
+          } else {
+            sm.onResume();
+            as.recordEvent('playback_resumed', session, { positionSeconds: state.currentTime });
+          }
         } else if (state.status === 'paused') {
           sm.onPause();
           if (session) {
@@ -214,9 +245,9 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
             as.recordEvent('buffering_started', session, { positionSeconds: state.currentTime });
           }
         } else if (state.status === 'error' && state.error) {
-          sm.recordFailure(state.error.code);
-          if (session) {
-            as.recordEvent('playback_failed', session, {
+          const s = sm.recordFailure(state.error.code);
+          if (s) {
+            as.recordEvent('playback_failed', s, {
               errorCode: state.error.code,
               errorMessage: state.error.message
             });
@@ -224,7 +255,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
         }
       });
 
-      adapter.onEvent((eventType) => {
+      eventUnsubscribe = adapter.onEvent((eventType) => {
         if (eventType === 'ended') {
           const session = sm.getCurrentSession();
           if (session) {
@@ -262,13 +293,56 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     },
 
     stop: () => {
+      if (stateUnsubscribe) {
+        stateUnsubscribe();
+        stateUnsubscribe = null;
+      }
+      if (eventUnsubscribe) {
+        eventUnsubscribe();
+        eventUnsubscribe = null;
+      }
       const { activeAdapter, sessionManager: sm, loopController: lc } = get();
       lc.cancelPendingLoop();
       sm.closeCurrentSession('stopped');
       if (activeAdapter) {
         activeAdapter.stop();
       }
-      set({ countdownRemaining: 0 });
+      set((s) => ({
+        countdownRemaining: 0,
+        adapterState: {
+          ...s.adapterState,
+          status: 'idle',
+          currentTime: 0,
+          error: null
+        }
+      }));
+    },
+
+    clearSource: () => {
+      get().stop();
+      const { activeAdapter, containerElement } = get();
+      if (activeAdapter) {
+        activeAdapter.dispose();
+        activeAdapter.clearListeners();
+      }
+      if (containerElement) {
+        containerElement.innerHTML = '';
+      }
+      set({
+        currentSource: null,
+        activeAdapter: null,
+        countdownRemaining: 0,
+        adapterState: {
+          status: 'idle',
+          currentTime: 0,
+          duration: 0,
+          volume: get().adapterState.volume,
+          isMuted: get().adapterState.isMuted,
+          playbackRate: 1.0,
+          bufferedTime: 0,
+          error: null
+        }
+      });
     },
 
     seek: (seconds: number) => {
@@ -306,6 +380,12 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     setLoopMode: (mode: LoopMode) => {
       get().loopController.setLoopMode(mode);
       set({ loopMode: mode });
+    },
+
+    cycleLoopMode: () => {
+      const current = get().loopMode;
+      const next = current === 'off' ? 'one' : current === 'one' ? 'all' : 'off';
+      get().setLoopMode(next);
     },
 
     setInterLoopDelay: (seconds: number) => {
@@ -346,6 +426,17 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       }
     },
 
+    playNext: (index: number) => {
+      const { queue, currentQueueIndex, reorderQueue } = get();
+      if (index < 0 || index >= queue.length || index === currentQueueIndex) return;
+      if (currentQueueIndex < 0) {
+        reorderQueue(index, 0);
+        return;
+      }
+      const targetIndex = index < currentQueueIndex ? currentQueueIndex : Math.min(queue.length - 1, currentQueueIndex + 1);
+      reorderQueue(index, targetIndex);
+    },
+
     nextTrack: async () => {
       const { queue, currentQueueIndex } = get();
       if (currentQueueIndex + 1 < queue.length) {
@@ -356,7 +447,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     },
 
     previousTrack: async () => {
-      const { queue, currentQueueIndex, adapterState } = get();
+      const { currentQueueIndex, adapterState } = get();
       if (adapterState.currentTime > 3) {
         get().seek(0);
         return;
@@ -369,6 +460,26 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     clearQueue: () => {
       set({ queue: [], currentQueueIndex: -1 });
       get().loopController.setQueue([], -1);
+    },
+
+    setQueue: (items: QueueItem[]) => {
+      set({ queue: items });
+      const currentIdx = get().currentQueueIndex;
+      get().loopController.setQueue(
+        items,
+        currentIdx >= 0 && currentIdx < items.length ? currentIdx : -1
+      );
+    },
+
+    shuffleQueue: () => {
+      const { queue } = get();
+      if (queue.length <= 1) return;
+      const shuffled = [...queue];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      get().setQueue(shuffled);
     },
 
     reorderQueue: (fromIndex: number, toIndex: number) => {
@@ -411,3 +522,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     }
   };
 });
+
+if (typeof window !== 'undefined') {
+  (window as any).__playerStore = usePlayerStore;
+}
