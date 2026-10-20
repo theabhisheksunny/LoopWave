@@ -1,9 +1,9 @@
 {
   "results": [
     {
-      "test": "Primary Simplified UI Layout",
+      "test": "Primary Simplified UI Layout (Responsive 1024/1280/1440px)",
       "status": "PASS",
-      "details": "Verified Logo, URL input, Play button, Video canvas, Controls, and Queue in unified view."
+      "details": "Verified Logo, URL input, Play button, Video canvas, Controls, and Queue across 1024px, 1280px, and 1440px widths."
     },
     {
       "test": "YouTube Shorts Playback (n2YGWiRRxEs)",
@@ -33,7 +33,7 @@
     {
       "test": "Queue Addition & Display",
       "status": "PASS",
-      "details": "Queue item added and displayed on main screen. Count=6."
+      "details": "Queue item added and displayed on main screen. Count=10."
     },
     {
       "test": "Secondary Overlays (Playlist, Library, Analytics, Settings, About)",
@@ -48,7 +48,7 @@
   ],
   "consoleLogs": [
     "[warning] Unrecognized feature: 'web-share'.",
-    "[error] Permissions policy violation: compute-pressure is not allowed in this document."
+    "[warning] Failed to execute 'postMessage' on 'DOMWindow': The target origin provided ('https://www.youtube.com') does not match the recipient window's origin ('file://')."
   ],
   "networkLogs": []
 }

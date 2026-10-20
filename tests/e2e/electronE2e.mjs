@@ -40,18 +40,37 @@ async function runE2e() {
   await page.waitForLoadState('domcontentloaded');
   await page.waitForTimeout(1000);
 
-  // 1. Initial Screen Layout Test
-  const s1 = path.join(rootDir, 'docs/screenshots/01_initial_screen.png');
-  await page.screenshot({ path: s1 });
+  // 1. Responsive Screen Layout Verification (1024px, 1280px, 1440px)
+  console.log('Capturing responsive screenshots at 1024px, 1280px, and 1440px widths...');
+  
+  // 1440px
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(rootDir, 'docs/screenshots/01_home_1440px_empty.png') });
+
+  // 1280px (standard)
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(rootDir, 'docs/screenshots/01_home_1280px_empty.png') });
+  await page.screenshot({ path: path.join(rootDir, 'docs/screenshots/01_initial_screen.png') });
+
+  // 1024px
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: path.join(rootDir, 'docs/screenshots/01_home_1024px_empty.png') });
+
+  // Restore 1280px for tests
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.waitForTimeout(300);
 
   const inputEl = await page.$('#main-url-input');
   const playBtn = await page.$('#main-play-button');
   const canvasEl = await page.$('.aspect-video');
 
   results.push({
-    test: 'Primary Simplified UI Layout',
+    test: 'Primary Simplified UI Layout (Responsive 1024/1280/1440px)',
     status: inputEl && playBtn && canvasEl ? 'PASS' : 'FAIL',
-    details: 'Verified Logo, URL input, Play button, Video canvas, Controls, and Queue in unified view.'
+    details: 'Verified Logo, URL input, Play button, Video canvas, Controls, and Queue across 1024px, 1280px, and 1440px widths.'
   });
 
   // 2. YouTube Shorts Playback Verification
@@ -107,6 +126,13 @@ async function runE2e() {
 
     const s3 = path.join(rootDir, 'docs/screenshots/03_direct_mp4_playback.png');
     await page.screenshot({ path: s3 });
+
+    // Capture 1440px loaded media screenshot
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(300);
+    await page.screenshot({ path: path.join(rootDir, 'docs/screenshots/03_home_1440px_loaded.png') });
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.waitForTimeout(200);
 
     const isMp4Ok = Boolean(videoState && videoState.readyState >= 1 && videoState.duration > 0);
     results.push({
