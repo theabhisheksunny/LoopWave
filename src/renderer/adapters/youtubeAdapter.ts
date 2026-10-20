@@ -23,8 +23,8 @@ function loadYouTubeIframeApi(): Promise<void> {
 
   apiLoadPromise = new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error('YouTube IFrame API script load timeout'));
-    }, 10000);
+      reject(new Error('YouTube API load timeout. Check network connection.'));
+    }, 12000);
 
     const prevCallback = window.onYouTubeIframeAPIReady;
     window.onYouTubeIframeAPIReady = () => {
@@ -33,14 +33,13 @@ function loadYouTubeIframeApi(): Promise<void> {
       resolve();
     };
 
-    // Check if script tag already exists
     if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
       const tag = document.createElement('script');
       tag.src = 'https://www.youtube.com/iframe_api';
       tag.async = true;
       tag.onerror = () => {
         clearTimeout(timeout);
-        reject(new Error('Failed to load YouTube IFrame API script'));
+        reject(new Error('Failed to download YouTube IFrame API.'));
       };
       document.head.appendChild(tag);
     }
@@ -65,7 +64,7 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
   getCapabilities(): AdapterCapabilities {
     return {
       supportsSpeed: true,
-      supportsPiP: false, // YouTube iframe restricts native HTML5 PiP
+      supportsPiP: false,
       supportsSeeking: true,
       supportsVolume: true,
       supportsQuality: true
@@ -77,6 +76,7 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
     container: HTMLElement,
     options?: { autoPlay?: boolean; initialTime?: number; volume?: number }
   ): Promise<void> {
+    this.dispose();
     this.isDisposed = false;
     this.updateState({ status: 'loading', error: null });
     this.currentVideoId = source.videoId;
@@ -92,83 +92,135 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
 
     // Clean previous container contents
     container.innerHTML = '';
-    const iframeMountId = `yt_player_${Date.now()}`;
+    const iframeMountId = `yt_player_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const iframeMount = document.createElement('div');
     iframeMount.id = iframeMountId;
     iframeMount.style.width = '100%';
     iframeMount.style.height = '100%';
     container.appendChild(iframeMount);
 
+    const playerVars: Record<string, any> = {
+      autoplay: options?.autoPlay ? 1 : 0,
+      controls: 1,
+      enablejsapi: 1,
+      rel: 0,
+      modestbranding: 1,
+      iv_load_policy: 3,
+      playsinline: 1,
+      start: options?.initialTime ? Math.floor(options.initialTime) : 0
+    };
+
+    if (
+      typeof window !== 'undefined' &&
+      window.location &&
+      window.location.protocol.startsWith('http')
+    ) {
+      playerVars.origin = window.location.origin;
+    }
+
     return new Promise((resolve) => {
-      this.player = new window.YT.Player(iframeMountId, {
-        videoId: source.videoId,
-        width: '100%',
-        height: '100%',
-        playerVars: {
-          autoplay: options?.autoPlay ? 1 : 0,
-          controls: 1, // Official YouTube player controls
-          rel: 0,
-          modestbranding: 1,
-          iv_load_policy: 3,
-          start: options?.initialTime ? Math.floor(options.initialTime) : 0,
-          origin: window.location.origin
-        },
-        events: {
-          onReady: (event: any) => {
-            if (this.isDisposed) return;
+      let isResolved = false;
 
-            const duration = this.player.getDuration() || 0;
-            const volume = options?.volume ?? 80;
-            this.player.setVolume(volume);
-
-            this.updateState({
-              status: 'ready',
-              duration,
-              volume,
-              isMuted: this.player.isMuted()
-            });
-
-            this.startTimeTicker();
-            resolve();
-          },
-          onStateChange: (event: any) => {
-            if (this.isDisposed) return;
-            this.handlePlayerStateChange(event.data);
-          },
-          onError: (event: any) => {
-            if (this.isDisposed) return;
-            this.handlePlayerError(event.data);
-          }
+      // Guard timeout against stuck loading
+      const loadTimeout = setTimeout(() => {
+        if (!isResolved && !this.isDisposed) {
+          isResolved = true;
+          this.setError(
+            'YT_LOAD_TIMEOUT',
+            'YouTube player took too long to initialize. Verify video availability and network.',
+            true
+          );
+          resolve();
         }
-      });
+      }, 15000);
+
+      try {
+        this.player = new window.YT.Player(iframeMountId, {
+          videoId: source.videoId,
+          host: 'https://www.youtube.com',
+          width: '100%',
+          height: '100%',
+          playerVars,
+          events: {
+            onReady: () => {
+              if (this.isDisposed || isResolved) return;
+              isResolved = true;
+              clearTimeout(loadTimeout);
+
+              const duration = this.player.getDuration() || 0;
+              const volume = options?.volume ?? 80;
+              try {
+                this.player.setVolume(volume);
+              } catch {
+                // ignore
+              }
+
+              this.updateState({
+                status: 'ready',
+                duration,
+                volume,
+                isMuted: false
+              });
+
+              this.startTimeTicker();
+
+              if (options?.autoPlay) {
+                try {
+                  this.player.playVideo();
+                } catch {
+                  // ignore
+                }
+              }
+
+              resolve();
+            },
+            onStateChange: (event: any) => {
+              if (this.isDisposed) return;
+              this.handlePlayerStateChange(event.data);
+            },
+            onError: (event: any) => {
+              if (this.isDisposed) return;
+              clearTimeout(loadTimeout);
+              this.handlePlayerError(event.data);
+              if (!isResolved) {
+                isResolved = true;
+                resolve();
+              }
+            }
+          }
+        });
+      } catch (err: any) {
+        clearTimeout(loadTimeout);
+        this.setError('YT_INIT_EXCEPTION', err.message || 'Failed to initialize player', true, err);
+        resolve();
+      }
     });
   }
 
   private handlePlayerStateChange(stateCode: number): void {
-    // YT.PlayerState: -1 = unstarted, 0 = ended, 1 = playing, 2 = paused, 3 = buffering, 5 = video cued
     switch (stateCode) {
-      case -1:
+      case -1: // unstarted
         this.updateState({ status: 'loading' });
         break;
-      case 0:
+      case 0: // ended
         this.updateState({ status: 'ended' });
         this.emitEvent('ended');
         break;
-      case 1:
+      case 1: // playing
         this.updateState({ status: 'playing' });
         this.emitEvent('playing');
         this.startTimeTicker();
         break;
-      case 2:
+      case 2: // paused
         this.updateState({ status: 'paused' });
         this.emitEvent('paused');
         this.stopTimeTicker();
         break;
-      case 3:
+      case 3: // buffering
         this.updateState({ status: 'buffering' });
         this.emitEvent('buffering');
         break;
-      case 5:
+      case 5: // video cued
         this.updateState({ status: 'ready' });
         break;
       default:
@@ -177,12 +229,12 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
   }
 
   private handlePlayerError(errorCode: number): void {
-    let message = 'An error occurred while playing the YouTube video.';
+    let message = 'An error occurred during YouTube playback.';
     let fatal = true;
 
     switch (errorCode) {
       case 2:
-        message = 'Invalid video ID or parameter value.';
+        message = 'Invalid parameter or video ID.';
         break;
       case 5:
         message = 'HTML5 player playback error occurred.';
@@ -192,10 +244,10 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
         break;
       case 101:
       case 150:
-        message = 'Embedding disabled by the video author/owner.';
+        message = 'Embedding disabled by the video owner.';
         break;
       default:
-        message = `YouTube player error code ${errorCode}.`;
+        message = `YouTube error code ${errorCode}.`;
         break;
     }
 
@@ -223,7 +275,7 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
           });
         }
       } catch {
-        // player might be transitioning
+        // transitioning
       }
     }, 250);
   }

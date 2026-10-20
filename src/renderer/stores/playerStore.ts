@@ -37,6 +37,7 @@ interface PlayerStoreState {
   // Actions
   setContainerElement: (el: HTMLElement | null) => void;
   loadUrl: (url: string, autoPlay?: boolean, initialTime?: number) => Promise<{ success: boolean; error?: string }>;
+  loadSource: (source: ResolvedSource, autoPlay?: boolean, initialTime?: number) => Promise<void>;
   play: () => Promise<void>;
   pause: () => void;
   stop: () => void;
@@ -83,7 +84,6 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     }
   });
 
-  // Track session updates
   sessionManager.onSessionChange((session) => {
     set({ currentSession: session });
     analyticsService.recordSession(session);
@@ -125,7 +125,13 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     analyticsService,
 
     setContainerElement: (el) => {
+      const prevEl = get().containerElement;
       set({ containerElement: el });
+
+      // If a container just attached and we have a current source that hasn't loaded into it
+      if (el && el !== prevEl && get().currentSource && !get().activeAdapter) {
+        get().loadSource(get().currentSource!, true);
+      }
     },
 
     loadUrl: async (url: string, autoPlay = true, initialTime = 0) => {
@@ -134,7 +140,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
         return { success: false, error: resolved.error || 'Invalid URL' };
       }
 
-      await (get() as any).loadSource(resolved.source, autoPlay, initialTime);
+      await get().loadSource(resolved.source, autoPlay, initialTime);
       return { success: true };
     },
 
@@ -177,13 +183,19 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
         currentSource: source,
         activeAdapter: adapter,
         capabilities: adapter.getCapabilities(),
-        countdownRemaining: 0
+        countdownRemaining: 0,
+        adapterState: {
+          ...adapterState,
+          status: 'loading',
+          error: null,
+          currentTime: initialTime,
+          duration: 0
+        }
       });
 
       sm.initTrack(source);
       lc.setCurrentSource(source);
 
-      // Subscribe to adapter state changes
       adapter.onStateChange((state) => {
         set({ adapterState: state });
 
@@ -330,7 +342,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       if (index >= 0 && index < queue.length) {
         set({ currentQueueIndex: index });
         get().loopController.setQueue(queue, index);
-        await (get() as any).loadSource(queue[index].source, true);
+        await get().loadSource(queue[index].source, true);
       }
     },
 

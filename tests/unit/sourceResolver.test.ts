@@ -25,11 +25,26 @@ describe('SourceResolver', () => {
       expect(res.source?.videoId).toBe('dQw4w9WgXcQ');
     });
 
-    it('resolves youtube shorts URLs', () => {
-      const res = resolveSource('https://www.youtube.com/shorts/dQw4w9WgXcQ');
+    it('resolves and normalizes YouTube Shorts URLs to canonical watch URL', () => {
+      const res = resolveSource('https://www.youtube.com/shorts/n2YGWiRRxEs');
       expect(res.success).toBe(true);
       expect(res.source?.sourceType).toBe('youtube');
-      expect(res.source?.videoId).toBe('dQw4w9WgXcQ');
+      expect(res.source?.videoId).toBe('n2YGWiRRxEs');
+      expect(res.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=n2YGWiRRxEs');
+    });
+
+    it('normalizes all 3 forms of the verification video to the same video ID', () => {
+      const shorts = resolveSource('https://www.youtube.com/shorts/n2YGWiRRxEs');
+      const watch = resolveSource('https://www.youtube.com/watch?v=n2YGWiRRxEs');
+      const youtbe = resolveSource('https://youtu.be/n2YGWiRRxEs');
+
+      expect(shorts.source?.videoId).toBe('n2YGWiRRxEs');
+      expect(watch.source?.videoId).toBe('n2YGWiRRxEs');
+      expect(youtbe.source?.videoId).toBe('n2YGWiRRxEs');
+
+      expect(shorts.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=n2YGWiRRxEs');
+      expect(watch.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=n2YGWiRRxEs');
+      expect(youtbe.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=n2YGWiRRxEs');
     });
 
     it('parses timestamps from youtube URLs', () => {

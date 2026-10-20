@@ -1,12 +1,11 @@
 import { ResolvedSource, SourceType } from '../../shared/types';
 
-// Simple deterministic hash for stable video IDs when URL doesn't have an ID
 function hashString(str: string): string {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = (hash << 5) - hash + char;
-    hash |= 0; // Convert to 32bit integer
+    hash |= 0;
   }
   return 'media_' + Math.abs(hash).toString(36);
 }
@@ -50,15 +49,15 @@ export function resolveSource(inputUrl: string): ResolveResult {
     let videoId: string | null = null;
 
     if (hostname === 'youtu.be') {
-      videoId = pathname.slice(1).split('/')[0];
+      videoId = pathname.replace(/^\/+/, '').split('/')[0]?.split('?')[0] || null;
     } else if (pathname.startsWith('/watch')) {
       videoId = urlObj.searchParams.get('v');
     } else if (pathname.startsWith('/embed/')) {
-      videoId = pathname.split('/embed/')[1]?.split('/')[0];
+      videoId = pathname.split('/embed/')[1]?.split('/')[0]?.split('?')[0] || null;
     } else if (pathname.startsWith('/shorts/')) {
-      videoId = pathname.split('/shorts/')[1]?.split('/')[0];
+      videoId = pathname.split('/shorts/')[1]?.split('/')[0]?.split('?')[0] || null;
     } else if (pathname.startsWith('/v/')) {
-      videoId = pathname.split('/v/')[1]?.split('/')[0];
+      videoId = pathname.split('/v/')[1]?.split('/')[0]?.split('?')[0] || null;
     }
 
     if (!videoId || !/^[a-zA-Z0-9_-]{10,12}$/.test(videoId)) {
@@ -68,7 +67,7 @@ export function resolveSource(inputUrl: string): ResolveResult {
       };
     }
 
-    // Parse start time if present (?t=120 or ?start=120)
+    // Parse start time if present (?t=120 or ?start=120 or ?t=1m30s)
     let startTime: number | undefined;
     const tParam = urlObj.searchParams.get('t') || urlObj.searchParams.get('start');
     if (tParam) {
@@ -83,6 +82,7 @@ export function resolveSource(inputUrl: string): ResolveResult {
       }
     }
 
+    // Always normalize to standard canonical watch URL
     const canonicalUrl = `https://www.youtube.com/watch?v=${videoId}`;
     const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`;
 
@@ -161,10 +161,9 @@ export function resolveSource(inputUrl: string): ResolveResult {
     };
   }
 
-  // If URL has no recognized media extension, inform user
   return {
     success: false,
     error:
-      'Unsupported link format. LoopWave currently supports YouTube links, direct media files (.mp4, .webm, .mp3, .wav, .flac), and HLS (.m3u8) streams.'
+      'Unsupported link format. LoopWave supports YouTube links, direct media (.mp4, .webm, .mp3, .wav, .flac), and HLS (.m3u8) streams.'
   };
 }

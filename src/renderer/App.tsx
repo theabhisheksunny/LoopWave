@@ -1,8 +1,6 @@
 import React, { useEffect } from 'react';
 import { TitleBar } from './components/layout/TitleBar';
-import { Sidebar } from './components/layout/Sidebar';
-import { HomeScreen } from './routes/HomeScreen';
-import { PlayerScreen } from './routes/PlayerScreen';
+import { MainPlayerView } from './components/player/MainPlayerView';
 import { LibraryScreen } from './routes/LibraryScreen';
 import { AnalyticsScreen } from './routes/AnalyticsScreen';
 import { SettingsScreen } from './routes/SettingsScreen';
@@ -11,9 +9,10 @@ import { useNavigationStore } from './stores/navigationStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useLibraryStore } from './stores/libraryStore';
 import { usePlayerStore } from './stores/playerStore';
+import { X } from 'lucide-react';
 
 export const App: React.FC = () => {
-  const { currentRoute } = useNavigationStore();
+  const { currentRoute, setRoute, closeModal } = useNavigationStore();
   const { loadSettings } = useSettingsStore();
   const { loadAll: loadLibrary } = useLibraryStore();
   const {
@@ -36,7 +35,14 @@ export const App: React.FC = () => {
   // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore keystrokes when typing into input fields
+      // Escape closes any open overlay modal
+      if (e.key === 'Escape') {
+        if (currentRoute !== 'main') {
+          closeModal();
+          return;
+        }
+      }
+
       const target = e.target as HTMLElement | null;
       if (
         target &&
@@ -105,6 +111,8 @@ export const App: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
   }, [
+    currentRoute,
+    closeModal,
     adapterState.status,
     adapterState.currentTime,
     adapterState.volume,
@@ -121,21 +129,36 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#0B0E14] text-slate-100 select-none">
-      {/* Top draggable frameless TitleBar */}
+      {/* 1. Header with Window Drag & Clean Secondary Nav */}
       <TitleBar />
 
-      {/* Main body: Sidebar + Content screen */}
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
-        <main className="flex-1 overflow-hidden relative bg-[#0E121B]">
-          {currentRoute === 'home' && <HomeScreen />}
-          {currentRoute === 'player' && <PlayerScreen />}
-          {currentRoute === 'library' && <LibraryScreen />}
-          {currentRoute === 'analytics' && <AnalyticsScreen />}
-          {currentRoute === 'settings' && <SettingsScreen />}
-          {currentRoute === 'about' && <AboutScreen />}
-        </main>
-      </div>
+      {/* 2. Main Player View (Always Mounted) */}
+      <main className="flex-1 overflow-hidden relative bg-[#0B0E14]">
+        <MainPlayerView />
+
+        {/* 3. Secondary Screens as High-Polish Non-Destructive Modals */}
+        {currentRoute !== 'main' && (
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-40 animate-fadeIn">
+            <div className="relative w-full max-w-4xl h-[88vh] bg-[#121721] border border-white/10 rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+              {/* Modal Close Button */}
+              <button
+                onClick={closeModal}
+                className="absolute top-4 right-4 z-50 p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                title="Close (Esc)"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex-1 overflow-y-auto">
+                {currentRoute === 'library' && <LibraryScreen />}
+                {currentRoute === 'analytics' && <AnalyticsScreen />}
+                {currentRoute === 'settings' && <SettingsScreen />}
+                {currentRoute === 'about' && <AboutScreen />}
+              </div>
+            </div>
+          </div>
+        )}
+      </main>
     </div>
   );
 };

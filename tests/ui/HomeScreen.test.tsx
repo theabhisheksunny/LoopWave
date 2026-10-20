@@ -1,37 +1,42 @@
 import { describe, it, expect } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { HomeScreen } from '../../src/renderer/routes/HomeScreen';
+import { MainPlayerView } from '../../src/renderer/components/player/MainPlayerView';
 
-describe('HomeScreen Component', () => {
-  it('renders headline, url input, and action buttons', () => {
-    render(<HomeScreen />);
+describe('MainPlayerView Component', () => {
+  it('renders url input, play button, canvas and controls', () => {
+    const { container } = render(<MainPlayerView />);
 
-    expect(screen.getByText(/Stream Online Media/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/Paste YouTube watch/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Play Now/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Add to Queue/i })).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(/Paste a video or audio link/i)
+    ).toBeInTheDocument();
+    expect(container.querySelector('#main-play-button')).toBeInTheDocument();
+    expect(screen.getByText(/No Media Loaded/i)).toBeInTheDocument();
   });
 
-  it('detects YouTube link and displays detection badge', () => {
-    render(<HomeScreen />);
+  it('detects YouTube link and displays YOUTUBE badge', () => {
+    const { container } = render(<MainPlayerView />);
 
-    const input = screen.getByPlaceholderText(/Paste YouTube watch/i);
+    const input = screen.getByPlaceholderText(/Paste a video or audio link/i);
     fireEvent.change(input, {
-      target: { value: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' }
+      target: { value: 'https://www.youtube.com/shorts/n2YGWiRRxEs' }
     });
 
-    expect(screen.getByText(/Detected: YOUTUBE/i)).toBeInTheDocument();
+    const badge = container.querySelector('span.uppercase');
+    expect(badge).toBeInTheDocument();
+    expect(badge?.textContent).toBe('youtube');
   });
 
-  it('detects HLS stream link and displays detection badge', () => {
-    render(<HomeScreen />);
+  it('detects HLS stream link and displays HLS badge', () => {
+    const { container } = render(<MainPlayerView />);
 
-    const input = screen.getByPlaceholderText(/Paste YouTube watch/i);
+    const input = screen.getByPlaceholderText(/Paste a video or audio link/i);
     fireEvent.change(input, {
       target: { value: 'https://example.com/live/stream.m3u8' }
     });
 
-    expect(screen.getByText(/Detected: HLS/i)).toBeInTheDocument();
+    const badge = container.querySelector('span.uppercase');
+    expect(badge).toBeInTheDocument();
+    expect(badge?.textContent).toBe('hls');
   });
 });
