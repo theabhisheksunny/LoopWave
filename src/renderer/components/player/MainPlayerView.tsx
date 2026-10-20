@@ -3,7 +3,6 @@ import { UrlInputBar } from './UrlInputBar';
 import { VideoCanvas } from './VideoCanvas';
 import { PlayerControls } from './PlayerControls';
 import { QueuePanel } from './QueuePanel';
-import { PlaybackSettings } from './PlaybackSettings';
 import { CurrentMediaInfo } from './CurrentMediaInfo';
 import { usePlayerStore } from '../../stores/playerStore';
 import { resolveSource } from '../../adapters/sourceResolver';
@@ -38,7 +37,7 @@ export const MainPlayerView: React.FC = () => {
   };
 
   return (
-    <div className="h-full w-full flex flex-col justify-between p-4 md:p-6 overflow-y-auto space-y-4 max-w-[1600px] mx-auto select-none">
+    <div className="h-full w-full flex flex-col justify-between p-3.5 md:p-5 overflow-y-auto space-y-3.5 max-w-[1600px] mx-auto select-none">
       {/* 1. Top Horizontal URL Input Bar */}
       <UrlInputBar
         urlInput={urlInput}
@@ -50,25 +49,23 @@ export const MainPlayerView: React.FC = () => {
       />
 
       {/* 2. Main Playback Area & Right-Side Queue Grid */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-4 min-h-[350px]">
-        {/* Main Player Column (2/3 width on desktop) */}
-        <div className="lg:col-span-2 flex flex-col justify-between space-y-2.5">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3.5 min-h-[380px] items-stretch">
+        {/* Main Player Column (2/3 to 3/4 width on desktop) */}
+        <div className="lg:col-span-8 xl:col-span-9 flex flex-col justify-between space-y-3">
           <div className="flex-1 flex flex-col justify-center">
             <VideoCanvas />
           </div>
+          {/* Unified Two-Row Playback Controls Bar */}
           <PlayerControls />
         </div>
 
-        {/* Up Next Queue Column (1/3 width on desktop) */}
-        <div className="lg:col-span-1 flex flex-col min-h-[220px]">
+        {/* Up Next Queue Column (1/3 to 1/4 width on desktop, matches player height) */}
+        <div className="lg:col-span-4 xl:col-span-3 flex flex-col h-full min-h-[260px]">
           <QueuePanel />
         </div>
       </div>
 
-      {/* 3. Playback Settings Strip */}
-      <PlaybackSettings />
-
-      {/* 4. Current Media Information Card */}
+      {/* 3. Current Media Information Card */}
       <CurrentMediaInfo />
     </div>
   );

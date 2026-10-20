@@ -55,14 +55,17 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
   };
 
   return (
-    <div className="bg-[#111B2B] border border-[#293750] rounded-2xl p-3 shadow-xl space-y-2.5">
-      {/* Primary Input Row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-        <div className="flex-1 relative flex items-center">
-          <div className="absolute left-3.5 text-[#A5B4CF] pointer-events-none">
+    <div className="bg-[#111B2B] border border-[#293750] rounded-2xl p-3 shadow-xl space-y-2 select-none">
+      {/* Primary Input Row: Flex layout with robust min-width: 0 */}
+      <div className="flex items-center gap-2.5 w-full">
+        {/* Text Entry Field: Outer flex container with min-w-0 */}
+        <div className="flex-1 min-w-0 flex items-center bg-[#18243A] border border-[#293750] focus-within:border-[#18D8E8] rounded-xl px-3 py-1 transition-all h-11">
+          {/* 1. Fixed-width Link Icon Container */}
+          <div className="w-7 h-7 flex items-center justify-center shrink-0 text-[#A5B4CF] mr-1">
             <Link className="w-4 h-4" />
           </div>
 
+          {/* 2. Text Input expanding to use available space with min-w-0 */}
           <input
             id="main-url-input"
             type="text"
@@ -74,12 +77,12 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
             }}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            className="w-full bg-[#18243A] border border-[#293750] focus:border-[#18D8E8] rounded-xl pl-10 pr-24 py-2.5 text-xs text-[#F5F7FF] placeholder-[#A5B4CF]/60 focus:outline-none transition-all"
+            className="flex-1 min-w-0 bg-transparent border-0 text-xs text-[#F5F7FF] placeholder-[#A5B4CF]/60 focus:outline-none py-1.5"
             aria-label="Media URL input"
           />
 
-          {/* Right inline controls inside input: Clear button and detected source badge */}
-          <div className="absolute right-2.5 flex items-center gap-1.5">
+          {/* 3. Reserved Space for Clear Button & Source Format Badge (inside input container) */}
+          <div className="flex items-center gap-1.5 shrink-0 ml-2">
             {urlInput && (
               <button
                 type="button"
@@ -93,21 +96,21 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
             )}
 
             {resolved?.success && resolved.source && (
-              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#101827] border border-[#18D8E8]/40 text-[#18D8E8] pointer-events-none">
+              <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-[#101827] border border-[#18D8E8]/40 text-[#18D8E8] pointer-events-none shrink-0">
                 {resolved.source.sourceType}
               </span>
             )}
           </div>
         </div>
 
-        {/* Buttons: Play & Add to Queue */}
-        <div className="flex items-center gap-2">
+        {/* Outside the text-entry area: Action Buttons */}
+        <div className="flex items-center gap-2 shrink-0">
           <button
             id="main-play-button"
             type="button"
             onClick={onPlay}
             disabled={!urlInput.trim() || isLoading}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-[#6547FF] to-[#3478FF] hover:from-[#7b61ff] hover:to-[#4e8cff] text-[#F5F7FF] font-semibold text-xs shadow-lg shadow-[#6547FF]/25 disabled:opacity-40 transition-all hover:scale-[1.02] active:scale-[0.98]"
+            className="h-11 flex items-center justify-center gap-2 px-5 rounded-xl bg-gradient-to-r from-[#6547FF] to-[#3478FF] hover:from-[#7b61ff] hover:to-[#4e8cff] text-[#F5F7FF] font-semibold text-xs shadow-md shadow-[#6547FF]/25 disabled:opacity-40 transition-all hover:scale-[1.02] active:scale-[0.98]"
             title="Stream entered URL"
           >
             {isLoading ? (
@@ -122,7 +125,7 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
             type="button"
             onClick={onAddToQueue}
             disabled={!urlInput.trim() || isLoading}
-            className="flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#18243A] hover:bg-[#18243A]/80 text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium disabled:opacity-40 transition-colors"
+            className="h-11 flex items-center justify-center gap-1.5 px-4 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#F5F7FF] border border-[#293750] text-xs font-medium disabled:opacity-40 transition-colors"
             title="Add current URL to queue"
           >
             <Plus className="w-3.5 h-3.5" />
