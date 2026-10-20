@@ -18,6 +18,7 @@ export const IPC_CHANNELS = {
   DATA_IMPORT: 'loopwave:data:import',
   URL_INSPECT: 'loopwave:url:inspect',
   SHELL_OPEN_EXTERNAL: 'loopwave:shell:openExternal',
+  DIALOG_OPEN_FILE: 'loopwave:dialog:openFile',
   WINDOW_MINIMIZE: 'loopwave:window:minimize',
   WINDOW_MAXIMIZE: 'loopwave:window:maximize',
   WINDOW_CLOSE: 'loopwave:window:close'

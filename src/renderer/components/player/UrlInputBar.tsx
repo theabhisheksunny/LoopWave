@@ -6,7 +6,8 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  FolderOpen
 } from 'lucide-react';
 import { usePlayerStore } from '../../stores/playerStore';
 import { resolveSource } from '../../adapters/sourceResolver';
@@ -52,6 +53,21 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
   const handleClear = () => {
     setUrlInput('');
     setFeedback(null);
+  };
+
+  const handleBrowseLocalFile = async () => {
+    if (window.loopwaveApi?.openFileDialog) {
+      try {
+        const result = await window.loopwaveApi.openFileDialog();
+        if (!result.canceled && result.filePaths && result.filePaths.length > 0) {
+          const selectedPath = result.filePaths[0];
+          setUrlInput(selectedPath);
+          if (feedback) setFeedback(null);
+        }
+      } catch (err) {
+        console.warn('Failed to open file dialog:', err);
+      }
+    }
   };
 
   return (
@@ -105,6 +121,18 @@ export const UrlInputBar: React.FC<UrlInputBarProps> = ({
 
         {/* Outside the text-entry area: Action Buttons */}
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleBrowseLocalFile}
+            disabled={isLoading}
+            className="h-11 flex items-center justify-center gap-1.5 px-3 rounded-xl bg-[#18243A] hover:bg-[#293750] text-[#A5B4CF] hover:text-[#18D8E8] border border-[#293750] text-xs font-medium transition-colors"
+            title="Browse and play local video or audio file directly"
+            aria-label="Open local file"
+          >
+            <FolderOpen className="w-3.5 h-3.5" />
+            <span className="hidden md:inline">Open File</span>
+          </button>
+
           <button
             id="main-play-button"
             type="button"

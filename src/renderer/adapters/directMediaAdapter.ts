@@ -11,6 +11,8 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
   private isDisposed = false;
   private retryCount = 0;
   private maxRetries = 3;
+  private abortController: AbortController | null = null;
+  private currentObjectUrl: string | null = null;
 
   canHandle(source: ResolvedSource): boolean {
     return (
@@ -52,13 +54,18 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
     video.playsInline = true;
     video.controls = false; // We use rich LoopWave controls
 
+    if (source.canonicalUrl.startsWith('blob:')) {
+      this.currentObjectUrl = source.canonicalUrl;
+    }
+
     const initialVolume = options?.volume ?? 80;
     video.volume = initialVolume / 100;
 
     this.mediaElement = video;
     container.appendChild(video);
 
-    this.bindMediaEvents(video);
+    this.abortController = new AbortController();
+    this.bindMediaEvents(video, this.abortController.signal);
 
     if (source.sourceType === 'hls') {
       if (Hls.isSupported()) {
@@ -141,7 +148,9 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
     }
   }
 
-  private bindMediaEvents(video: HTMLVideoElement): void {
+  private bindMediaEvents(video: HTMLVideoElement, signal?: AbortSignal): void {
+    const opts = signal ? { signal } : undefined;
+
     video.addEventListener('loadedmetadata', () => {
       if (this.isDisposed) return;
       this.updateState({
@@ -150,13 +159,13 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
         volume: Math.round(video.volume * 100),
         isMuted: video.muted
       });
-    });
+    }, opts);
 
     video.addEventListener('playing', () => {
       if (this.isDisposed) return;
       this.updateState({ status: 'playing' });
       this.emitEvent('playing');
-    });
+    }, opts);
 
     video.addEventListener('pause', () => {
       if (this.isDisposed) return;
@@ -165,19 +174,19 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
         this.updateState({ status: 'paused' });
         this.emitEvent('paused');
       }
-    });
+    }, opts);
 
     video.addEventListener('waiting', () => {
       if (this.isDisposed) return;
       this.updateState({ status: 'buffering' });
       this.emitEvent('buffering');
-    });
+    }, opts);
 
     video.addEventListener('ended', () => {
       if (this.isDisposed) return;
       this.updateState({ status: 'ended' });
       this.emitEvent('ended');
-    });
+    }, opts);
 
     video.addEventListener('timeupdate', () => {
       if (this.isDisposed) return;
@@ -190,7 +199,7 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
         duration: isFinite(video.duration) ? video.duration : this.state.duration,
         bufferedTime: buffered
       });
-    });
+    }, opts);
 
     video.addEventListener('volumechange', () => {
       if (this.isDisposed) return;
@@ -198,7 +207,7 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
         volume: Math.round(video.volume * 100),
         isMuted: video.muted
       });
-    });
+    }, opts);
 
     video.addEventListener('error', () => {
       if (this.isDisposed) return;
@@ -228,7 +237,7 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
       }
 
       this.setError(code, message, true, mediaErr);
-    });
+    }, opts);
   }
 
   async play(): Promise<void> {
@@ -302,8 +311,30 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
   dispose(): void {
     this.isDisposed = true;
 
+    // Immediately unbind all media element DOM event listeners
+    if (this.abortController) {
+      try {
+        this.abortController.abort();
+      } catch {
+        // ignore
+      }
+      this.abortController = null;
+    }
+
+    // Revoke any application-managed object/blob URLs
+    if (this.currentObjectUrl) {
+      try {
+        URL.revokeObjectURL(this.currentObjectUrl);
+      } catch {
+        // ignore
+      }
+      this.currentObjectUrl = null;
+    }
+
+    // Detach and destroy HLS instance
     if (this.hls) {
       try {
+        this.hls.detachMedia();
         this.hls.destroy();
       } catch (err) {
         console.warn('Error destroying HLS instance:', err);
@@ -311,12 +342,19 @@ export class DirectMediaAdapter extends BasePlaybackAdapter {
       this.hls = null;
     }
 
+    // Fully release media element, hardware decoders, and buffer contexts
     if (this.mediaElement) {
-      this.mediaElement.pause();
-      this.mediaElement.removeAttribute('src');
-      this.mediaElement.load();
-      if (this.mediaElement.parentElement) {
-        this.mediaElement.parentElement.removeChild(this.mediaElement);
+      try {
+        this.mediaElement.pause();
+        this.mediaElement.removeAttribute('src');
+        this.mediaElement.src = '';
+        this.mediaElement.srcObject = null;
+        this.mediaElement.load();
+        if (this.mediaElement.parentElement) {
+          this.mediaElement.parentElement.removeChild(this.mediaElement);
+        }
+      } catch {
+        // ignore
       }
       this.mediaElement = null;
     }

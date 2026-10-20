@@ -22,7 +22,9 @@ interface PlayerStoreState {
 
   loopMode: LoopMode;
   interLoopDelaySeconds: number;
+  randomizedDelayEnabled: boolean;
   countdownRemaining: number;
+  selectedDelaySeconds: number | null;
 
   queue: QueueItem[];
   currentQueueIndex: number;
@@ -49,6 +51,7 @@ interface PlayerStoreState {
   setLoopMode: (mode: LoopMode) => void;
   cycleLoopMode: () => void;
   setInterLoopDelay: (seconds: number) => void;
+  setRandomizedDelayEnabled: (enabled: boolean) => void;
 
   // Queue actions
   addToQueue: (source: ResolvedSource) => void;
@@ -88,8 +91,11 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       set({ currentQueueIndex: nextIndex });
       await get().loadSource(nextItem.source, true);
     },
-    onDelayTick: (secondsRemaining) => {
-      set({ countdownRemaining: secondsRemaining });
+    onDelayTick: (secondsRemaining, selectedDelaySec) => {
+      set({
+        countdownRemaining: secondsRemaining,
+        selectedDelaySeconds: selectedDelaySec ?? null
+      });
     }
   });
 
@@ -121,7 +127,9 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
 
     loopMode: 'off',
     interLoopDelaySeconds: 2,
+    randomizedDelayEnabled: false,
     countdownRemaining: 0,
+    selectedDelaySeconds: null,
 
     queue: [],
     currentQueueIndex: -1,
@@ -203,6 +211,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
         activeAdapter: adapter,
         capabilities: adapter.getCapabilities(),
         countdownRemaining: 0,
+        selectedDelaySeconds: null,
         adapterState: {
           ...adapterState,
           status: 'loading',
@@ -309,6 +318,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       }
       set((s) => ({
         countdownRemaining: 0,
+        selectedDelaySeconds: null,
         adapterState: {
           ...s.adapterState,
           status: 'idle',
@@ -320,7 +330,7 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
 
     clearSource: () => {
       get().stop();
-      const { activeAdapter, containerElement } = get();
+      const { activeAdapter, containerElement, sessionManager: sm } = get();
       if (activeAdapter) {
         activeAdapter.dispose();
         activeAdapter.clearListeners();
@@ -328,10 +338,13 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
       if (containerElement) {
         containerElement.innerHTML = '';
       }
+      sm.reset();
       set({
         currentSource: null,
         activeAdapter: null,
+        currentSession: null,
         countdownRemaining: 0,
+        selectedDelaySeconds: null,
         adapterState: {
           status: 'idle',
           currentTime: 0,
@@ -391,6 +404,11 @@ export const usePlayerStore = create<PlayerStoreState>((set, get) => {
     setInterLoopDelay: (seconds: number) => {
       get().loopController.setInterLoopDelay(seconds);
       set({ interLoopDelaySeconds: seconds });
+    },
+
+    setRandomizedDelayEnabled: (enabled: boolean) => {
+      get().loopController.setRandomizedDelayEnabled(enabled);
+      set({ randomizedDelayEnabled: enabled });
     },
 
     addToQueue: (source: ResolvedSource) => {

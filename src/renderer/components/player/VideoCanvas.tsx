@@ -11,6 +11,8 @@ export const VideoCanvas: React.FC = () => {
     currentSource,
     adapterState,
     countdownRemaining,
+    selectedDelaySeconds,
+    randomizedDelayEnabled,
     queue,
     currentQueueIndex,
     setContainerElement,
@@ -35,8 +37,9 @@ export const VideoCanvas: React.FC = () => {
   const isIdle = !currentSource;
 
   const handleRetry = () => {
-    if (currentSource?.canonicalUrl) {
-      loadUrl(currentSource.canonicalUrl, true);
+    const retryUrl = currentSource?.originalUrl || currentSource?.canonicalUrl;
+    if (retryUrl) {
+      loadUrl(retryUrl, true);
     }
   };
 
@@ -73,11 +76,20 @@ export const VideoCanvas: React.FC = () => {
           <p className="text-lg font-bold text-[#F5F7FF] tracking-wide">
             Next Loop Cycle Starting In
           </p>
-          <span className="text-4xl font-extrabold font-mono text-[#18D8E8]">
-            {countdownRemaining}s
+          <span className="text-4xl font-extrabold font-mono text-[#18D8E8] tabular-nums">
+            {randomizedDelayEnabled
+              ? `${countdownRemaining.toFixed(3)}s`
+              : `${Math.ceil(countdownRemaining)}s`}
           </span>
+          {randomizedDelayEnabled && selectedDelaySeconds !== null && (
+            <div className="px-3 py-1 rounded-full bg-cyan-950/70 border border-cyan-500/40 text-xs font-mono text-cyan-300">
+              Selected Delay: {selectedDelaySeconds.toFixed(5)}s
+            </div>
+          )}
           <p className="text-xs text-[#A5B4CF]">
-            LoopWave infinite loop scheduler active
+            {randomizedDelayEnabled
+              ? 'LoopWave floating-point randomized delay active'
+              : 'LoopWave infinite loop scheduler active'}
           </p>
         </div>
       )}

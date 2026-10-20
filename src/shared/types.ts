@@ -103,6 +103,7 @@ export interface AppSettings {
   defaultVolume: number;
   autoPlay: boolean;
   hardwareAcceleration: boolean;
+  randomizedDelayEnabled?: boolean;
 }
 
 export interface AdapterCapabilities {

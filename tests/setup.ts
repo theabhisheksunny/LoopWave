@@ -57,6 +57,7 @@ Object.defineProperty(window, 'loopwaveApi', {
     }),
     inspectUrl: vi.fn().mockResolvedValue({ valid: true, mimeType: 'video/mp4' }),
     openExternal: vi.fn().mockResolvedValue({ success: true }),
+    openFileDialog: vi.fn().mockResolvedValue({ canceled: false, filePaths: ['D:\\media\\sample.mp4'] }),
     minimizeWindow: vi.fn().mockResolvedValue(undefined),
     maximizeWindow: vi.fn().mockResolvedValue(undefined),
     closeWindow: vi.fn().mockResolvedValue(undefined),

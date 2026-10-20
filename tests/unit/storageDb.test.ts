@@ -11,10 +11,10 @@ describe('DatabaseManager (SQLite & In-Memory Storage)', () => {
     await db.init();
   });
 
-  it('initializes with default settings', () => {
+  it('initializes with default settings (RAM-first with persistAnalytics disabled)', () => {
     const settings = db.getSettings();
     expect(settings.privateMode).toBe(false);
-    expect(settings.persistAnalytics).toBe(true);
+    expect(settings.persistAnalytics).toBe(false);
     expect(settings.defaultLoopMode).toBe('off');
     expect(settings.defaultDelaySeconds).toBe(2);
   });
@@ -46,7 +46,27 @@ describe('DatabaseManager (SQLite & In-Memory Storage)', () => {
     expect(library.length).toBe(0);
   });
 
-  it('records playback sessions and computes analytics summary accurately', () => {
+  it('does not store session records when persistAnalytics is disabled', () => {
+    const session1: PlaybackSession = {
+      sessionId: 'a0000000-0000-0000-0000-000000000001',
+      videoId: 'vid_123',
+      cycleNumber: 1,
+      startedAt: '2026-01-01T10:00:00Z',
+      endedAt: '2026-01-01T10:02:00Z',
+      watchedSeconds: 120,
+      completionStatus: 'completed',
+      errorCode: null,
+      sourceType: 'youtube'
+    };
+
+    db.recordAnalyticsSession(session1);
+    const summary = db.getAnalyticsSummary();
+    expect(summary.totalSessions).toBe(0);
+  });
+
+  it('records playback sessions and computes analytics summary accurately when persistAnalytics is enabled', () => {
+    db.saveSettings({ persistAnalytics: true });
+
     const session1: PlaybackSession = {
       sessionId: 'a0000000-0000-0000-0000-000000000001',
       videoId: 'vid_123',
@@ -95,7 +115,9 @@ describe('DatabaseManager (SQLite & In-Memory Storage)', () => {
     expect(summary.avgSessionDurationSeconds).toBe(135); // 270 / 2
   });
 
-  it('records analytics events and fetches them in reverse chronological order', () => {
+  it('records analytics events and fetches them in reverse chronological order when persistAnalytics is enabled', () => {
+    db.saveSettings({ persistAnalytics: true });
+
     const event1: AnalyticsEvent = {
       eventId: 'e0000000-0000-0000-0000-000000000001',
       sessionId: 'a0000000-0000-0000-0000-000000000001',

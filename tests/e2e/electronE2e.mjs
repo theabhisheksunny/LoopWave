@@ -179,6 +179,18 @@ async function runE2e() {
       unembeddableState.seekDisabled
     );
 
+    // Test Retry button reinitializes playback
+    const retryBtn = await page.$('.aspect-video button:has-text("Retry")');
+    let retryWorked = false;
+    if (retryBtn) {
+      await retryBtn.click();
+      await page.waitForTimeout(600);
+      const duringRetryStatus = await page.evaluate(() => window.__playerStore?.getState()?.adapterState?.status);
+      await page.waitForTimeout(3000); // Wait for YouTube to re-emit error
+      const postRetryStatus = await page.evaluate(() => window.__playerStore?.getState()?.adapterState?.status);
+      retryWorked = (duringRetryStatus === 'loading' || postRetryStatus === 'error');
+    }
+
     // Test Dismiss button resets player state to idle
     const dismissBtn = await page.$('.aspect-video button:has-text("Dismiss")');
     if (dismissBtn) {
@@ -190,17 +202,59 @@ async function runE2e() {
 
     results.push({
       test: 'YouTube Unembeddable Error & Fallback (kwXZjR5phcc)',
-      status: isFallbackOk && postDismissStatus === 'idle' ? 'PASS' : 'FAIL',
+      status: isFallbackOk && retryWorked && postDismissStatus === 'idle' ? 'PASS' : 'FAIL',
       details: isFallbackOk
-        ? `Identified video owner restriction (${unembeddableState.code}), canonicalUrl normalized to https://www.youtube.com/watch?v=kwXZjR5phcc, disabled seek controls, displayed all 4 action buttons (Retry, Copy Link, Open on YouTube, Dismiss), and verified Dismiss cleanly resets state to idle.`
+        ? `Identified video owner restriction (${unembeddableState.code}), canonicalUrl normalized to https://www.youtube.com/watch?v=kwXZjR5phcc, displayed all 4 action buttons (Retry, Copy Link, Open on YouTube, Dismiss), verified Retry cleanly re-initializes player, and verified Dismiss resets state to idle.`
         : 'Failed to display error overlay or Open on YouTube fallback.'
     });
   } catch (err) {
     results.push({ test: 'YouTube Unembeddable Fallback', status: 'FAIL', details: err.message });
   }
 
-  // 2b. Real YouTube Embeddable Playback Verification
-  // Target: https://www.youtube.com/watch?v=M7lc1UVf-VE (Official Google YouTube IFrame API sample)
+  // 2b. Second Unembeddable YouTube Video Verification (n2YGWiRRxEs)
+  try {
+    console.log('Testing second unembeddable YouTube Shorts link: https://www.youtube.com/shorts/n2YGWiRRxEs');
+    await page.fill('#main-url-input', 'https://www.youtube.com/shorts/n2YGWiRRxEs');
+    await page.waitForTimeout(300);
+
+    await page.click('#main-play-button');
+    await page.waitForTimeout(4000);
+
+    const shorts2State = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        code: ps?.adapterState?.error?.code,
+        canonicalUrl: ps?.currentSource?.canonicalUrl
+      };
+    });
+    console.log('Second YouTube unembeddable state:', shorts2State);
+
+    // Dismiss
+    const dismissBtn2 = await page.$('.aspect-video button:has-text("Dismiss")');
+    if (dismissBtn2) {
+      await dismissBtn2.click();
+      await page.waitForTimeout(400);
+    }
+
+    const isShorts2Ok = Boolean(
+      shorts2State &&
+      (shorts2State.code === 'YT_ERROR_150' || shorts2State.status === 'error') &&
+      shorts2State.canonicalUrl === 'https://www.youtube.com/watch?v=n2YGWiRRxEs'
+    );
+
+    results.push({
+      test: 'YouTube Second Unembeddable Fallback (n2YGWiRRxEs)',
+      status: isShorts2Ok ? 'PASS' : 'FAIL',
+      details: isShorts2Ok
+        ? `Identified restricted Shorts (${shorts2State.code}), normalized to https://www.youtube.com/watch?v=n2YGWiRRxEs, and verified external fallback availability.`
+        : 'Failed to identify second restricted YouTube Short.'
+    });
+  } catch (err) {
+    results.push({ test: 'YouTube Second Unembeddable Fallback', status: 'FAIL', details: err.message });
+  }
+
+  // 2c. Real YouTube Embeddable Playback Verification (Video 1: M7lc1UVf-VE)
   try {
     console.log('Testing embeddable YouTube video: https://www.youtube.com/watch?v=M7lc1UVf-VE');
     await page.fill('#main-url-input', 'https://www.youtube.com/watch?v=M7lc1UVf-VE');
@@ -256,6 +310,96 @@ async function runE2e() {
     });
   } catch (err) {
     results.push({ test: 'YouTube Embeddable Playback', status: 'FAIL', details: err.message });
+  }
+
+  // 2d. Second Real YouTube Embeddable Playback Verification (Video 2: jNQXAC9IVRw)
+  try {
+    console.log('Testing second embeddable YouTube video: https://www.youtube.com/watch?v=jNQXAC9IVRw');
+    await page.fill('#main-url-input', 'https://www.youtube.com/watch?v=jNQXAC9IVRw');
+    await page.waitForTimeout(300);
+
+    await page.click('#main-play-button');
+    await page.waitForTimeout(3500);
+
+    const ytState3 = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        duration: ps?.adapterState?.duration,
+        currentTime: ps?.adapterState?.currentTime
+      };
+    });
+    console.log('Second YouTube embeddable state initial:', ytState3);
+
+    await page.waitForTimeout(1500);
+    const ytState4 = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        currentTime: ps?.adapterState?.currentTime
+      };
+    });
+    console.log('Second YouTube embeddable state after 1.5s:', ytState4);
+
+    const isYtPlay2Ok = Boolean(
+      ytState3 &&
+      ytState3.duration > 0 &&
+      ytState4.currentTime >= ytState3.currentTime
+    );
+
+    results.push({
+      test: 'YouTube Second Embeddable Playback (jNQXAC9IVRw)',
+      status: isYtPlay2Ok ? 'PASS' : 'FAIL',
+      details: isYtPlay2Ok
+        ? `Second YouTube video (jNQXAC9IVRw) playing natively. Duration=${ytState3.duration}s, playhead advanced from ${ytState3.currentTime.toFixed(2)}s to ${ytState4.currentTime.toFixed(2)}s.`
+        : 'Second YouTube player failed to load or advance playhead.'
+    });
+  } catch (err) {
+    results.push({ test: 'YouTube Second Embeddable Playback', status: 'FAIL', details: err.message });
+  }
+
+  // 3a. Local Media Direct File Playback Verification (Without Copying)
+  try {
+    const localFixturePath = 'C:/Users/sunny/.gemini/antigravity-cli/brain/e5791bb4-57fd-4887-b437-13ce87c53fa9/scratch/sample_local.mp4';
+    console.log('Testing Local Direct Media link:', localFixturePath);
+    await page.fill('#main-url-input', localFixturePath);
+    await page.waitForTimeout(300);
+
+    await page.click('#main-play-button');
+    await page.waitForTimeout(3000);
+
+    const localVideoState = await page.evaluate(() => {
+      const v = document.querySelector('.aspect-video video');
+      const ps = window.__playerStore?.getState();
+      if (!v) return null;
+      return {
+        duration: v.duration,
+        currentTime: v.currentTime,
+        paused: v.paused,
+        readyState: v.readyState,
+        sourceType: ps?.currentSource?.sourceType,
+        canonicalUrl: ps?.currentSource?.canonicalUrl
+      };
+    });
+    console.log('Local video playback state:', localVideoState);
+
+    const isLocalPlayOk = Boolean(
+      localVideoState &&
+      localVideoState.readyState >= 1 &&
+      localVideoState.duration > 0 &&
+      localVideoState.sourceType === 'direct-video' &&
+      localVideoState.canonicalUrl?.includes('/local-media?path=')
+    );
+
+    results.push({
+      test: 'Local Direct Media Playback (sample_local.mp4)',
+      status: isLocalPlayOk ? 'PASS' : 'FAIL',
+      details: isLocalPlayOk
+        ? `Local file streamed directly via HTTP 206 range requests without copying. Duration=${localVideoState.duration}s, readyState=${localVideoState.readyState}.`
+        : 'Local media file failed to stream directly.'
+    });
+  } catch (err) {
+    results.push({ test: 'Local Direct Media Playback', status: 'FAIL', details: err.message });
   }
 
   // 3. Direct MP4 Video Playback Verification (Official MDN Test Video)

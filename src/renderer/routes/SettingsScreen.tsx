@@ -97,6 +97,20 @@ export const SettingsScreen: React.FC = () => {
     }
   };
 
+  const handleToggleRandomizedDelay = async () => {
+    const nextVal = !settings.randomizedDelayEnabled;
+    try {
+      await updateSettings({ randomizedDelayEnabled: nextVal });
+      showToast(
+        nextVal
+          ? 'Randomized delay scheduling enabled for background maintenance (0–10s jitter).'
+          : 'Randomized delay scheduling disabled — immediate execution.'
+      );
+    } catch {
+      showToast('Failed to update randomized delay setting', true);
+    }
+  };
+
   const handleLoopModeChange = async (mode: LoopMode) => {
     try {
       await updateSettings({ defaultLoopMode: mode });
@@ -357,6 +371,37 @@ export const SettingsScreen: React.FC = () => {
             <span className="px-2.5 py-1 rounded-lg bg-emerald-950/40 border border-emerald-500/40 text-emerald-300 font-mono text-[11px] shrink-0">
               Zero (Disabled)
             </span>
+          </div>
+
+          {/* Randomized Delay Scheduling Toggle */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3.5 rounded-xl bg-[#18243A]/40 border border-[#293750]/50">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-semibold text-[#F5F7FF] text-sm">Randomized Delay Scheduling (0–10s)</span>
+                <span className="text-[10px] font-mono text-cyan-300 bg-cyan-950/40 px-2 py-0.5 rounded border border-cyan-500/30">
+                  {settings.randomizedDelayEnabled ? 'Enabled' : 'Disabled (Default)'}
+                </span>
+              </div>
+              <p className="text-[#A5B4CF] text-[11px] leading-relaxed max-w-xl">
+                Applies controlled 0–10s timing variation to eligible non-critical background maintenance tasks (e.g. database retention cleanup) to prevent disk I/O contention. Playback controls and user actions are never delayed.
+              </p>
+            </div>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={Boolean(settings.randomizedDelayEnabled)}
+              aria-label="Toggle Randomized Delay Scheduling"
+              onClick={handleToggleRandomizedDelay}
+              className={`w-12 h-6 rounded-full transition-colors relative focus:outline-none focus:ring-2 focus:ring-cyan-400 shrink-0 ${
+                settings.randomizedDelayEnabled ? 'bg-cyan-500' : 'bg-slate-700/80 hover:bg-slate-700'
+              }`}
+            >
+              <div
+                className={`w-4 h-4 rounded-full bg-white absolute top-1 shadow-md transition-transform ${
+                  settings.randomizedDelayEnabled ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
           </div>
         </div>
       </section>

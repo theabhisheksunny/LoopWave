@@ -30,8 +30,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
         ]);
         set({ settings, storagePolicy: policy, isLoading: false });
 
-        // Synchronize idle player defaults
+        // Synchronize player defaults and randomized delay scheduling
         const player = usePlayerStore.getState();
+        if (settings.randomizedDelayEnabled !== undefined) {
+          player.setRandomizedDelayEnabled(settings.randomizedDelayEnabled);
+        }
         if (!player.currentSource) {
           if (settings.defaultLoopMode) player.setLoopMode(settings.defaultLoopMode);
           if (settings.defaultDelaySeconds !== undefined) player.setInterLoopDelay(settings.defaultDelaySeconds);
@@ -51,8 +54,11 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     const updated = { ...current, ...partial };
     set({ settings: updated });
 
-    // Sync to player defaults if player is currently idle (does not disturb active playback)
+    // Sync to player defaults and randomized delay scheduling
     const player = usePlayerStore.getState();
+    if (partial.randomizedDelayEnabled !== undefined) {
+      player.setRandomizedDelayEnabled(partial.randomizedDelayEnabled);
+    }
     if (!player.currentSource) {
       if (partial.defaultLoopMode) player.setLoopMode(partial.defaultLoopMode);
       if (partial.defaultDelaySeconds !== undefined) player.setInterLoopDelay(partial.defaultDelaySeconds);

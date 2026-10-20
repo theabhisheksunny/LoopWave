@@ -55,13 +55,26 @@ describe('SettingsScreen UI Component (Phase 5)', () => {
     render(<SettingsScreen />);
 
     const analyticsSwitch = screen.getByRole('switch', { name: /Toggle Persist Analytics/i });
-    expect(analyticsSwitch).toHaveAttribute('aria-checked', 'true');
+    expect(analyticsSwitch).toHaveAttribute('aria-checked', 'false');
 
     await act(async () => {
       fireEvent.click(analyticsSwitch);
     });
 
-    expect(useSettingsStore.getState().settings.persistAnalytics).toBe(false);
+    expect(useSettingsStore.getState().settings.persistAnalytics).toBe(true);
+  });
+
+  it('toggles Randomized Delay Scheduling state', async () => {
+    render(<SettingsScreen />);
+
+    const delaySwitch = screen.getByRole('switch', { name: /Toggle Randomized Delay Scheduling/i });
+    expect(delaySwitch).toHaveAttribute('aria-checked', 'false');
+
+    await act(async () => {
+      fireEvent.click(delaySwitch);
+    });
+
+    expect(useSettingsStore.getState().settings.randomizedDelayEnabled).toBe(true);
   });
 
   it('updates Analytics Retention days when selecting options', async () => {

@@ -23,15 +23,96 @@ export function resolveSource(inputUrl: string): ResolveResult {
 
   const trimmed = inputUrl.trim();
 
+  // Local File Detection (file:// URLs, Windows drive paths like D:\... or C:/..., and absolute paths)
+  const isFileProtocol = trimmed.startsWith('file://') || trimmed.startsWith('file:/');
+  const isWindowsDrivePath = /^[a-zA-Z]:[\\\/]/.test(trimmed);
+  const isUnixAbsolutePath = trimmed.startsWith('/') && !trimmed.startsWith('//');
+
+  if (isFileProtocol || isWindowsDrivePath || isUnixAbsolutePath) {
+    let rawPath = trimmed;
+    if (isFileProtocol) {
+      rawPath = trimmed.replace(/^file:\/\/\/?/, '');
+      try {
+        rawPath = decodeURIComponent(rawPath);
+      } catch {
+        // ignore
+      }
+    }
+
+    const lower = rawPath.toLowerCase();
+    const fileName = rawPath.split(/[\\\/]/).pop()?.split('?')[0] || 'Local Media';
+    const videoId = hashString(rawPath);
+
+    // Direct streaming endpoint via local loopback server without caching or disk duplication
+    const origin =
+      typeof window !== 'undefined' && window.location?.origin && window.location.origin !== 'null'
+        ? window.location.origin
+        : 'http://127.0.0.1:0';
+    const streamingUrl = `${origin}/local-media?path=${encodeURIComponent(rawPath)}`;
+
+    // HLS Stream (.m3u8)
+    if (lower.endsWith('.m3u8')) {
+      return {
+        success: true,
+        source: {
+          sourceType: 'hls',
+          originalUrl: trimmed,
+          canonicalUrl: streamingUrl,
+          videoId,
+          title: fileName,
+          mediaType: 'video',
+          isLive: false
+        }
+      };
+    }
+
+    // Direct Video (.mp4, .webm, .ogg, .ogv, .mov, .m4v)
+    const videoExts = ['.mp4', '.webm', '.ogg', '.ogv', '.mov', '.m4v'];
+    if (videoExts.some((ext) => lower.endsWith(ext))) {
+      return {
+        success: true,
+        source: {
+          sourceType: 'direct-video',
+          originalUrl: trimmed,
+          canonicalUrl: streamingUrl,
+          videoId,
+          title: fileName,
+          mediaType: 'video'
+        }
+      };
+    }
+
+    // Direct Audio (.mp3, .wav, .aac, .flac, .m4a, .oga)
+    const audioExts = ['.mp3', '.wav', '.aac', '.flac', '.m4a', '.oga'];
+    if (audioExts.some((ext) => lower.endsWith(ext))) {
+      return {
+        success: true,
+        source: {
+          sourceType: 'direct-audio',
+          originalUrl: trimmed,
+          canonicalUrl: streamingUrl,
+          videoId,
+          title: fileName,
+          mediaType: 'audio'
+        }
+      };
+    }
+
+    return {
+      success: false,
+      error: 'Unsupported local media format. Supported: .mp4, .webm, .mov, .mp3, .wav, .flac, .m3u8.'
+    };
+  }
+
   let urlObj: URL;
   try {
     urlObj = new URL(trimmed);
   } catch {
-    return { success: false, error: 'Malformed URL. Ensure it starts with http:// or https://' };
+    return { success: false, error: 'Malformed URL. Ensure it starts with http://, https://, or a valid local file path' };
   }
 
   if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
-    return { success: false, error: 'Only http and https protocols are supported' };
+    return { success: false, error: 'Only http, https, and local media files are supported' };
   }
 
   const hostname = urlObj.hostname.toLowerCase();

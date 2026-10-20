@@ -77,6 +77,21 @@ export class PlaybackSessionManager {
     this.currentSession = null;
   }
 
+  /**
+   * Resets active session state and releases all in-memory references when playback is stopped or cleared.
+   */
+  public reset(): void {
+    if (this.currentSession && this.currentSession.completionStatus === 'active') {
+      this.closeCurrentSession('interrupted');
+    }
+
+    this.currentVideoId = null;
+    this.currentCycleNumber = 0;
+    this.resetCycleState();
+    this.currentSession = null;
+    this.notify();
+  }
+
   private resetCycleState(): void {
     this.isCurrentlyPlaying = false;
     this.playSegmentStartMs = 0;
@@ -155,7 +170,7 @@ export class PlaybackSessionManager {
    * Guarded against duplicate completion events.
    */
   public recordCompletion(): PlaybackSession | null {
-    if (!this.currentSession || this.hasRecordedCompletion) {
+    if (!this.currentSession || this.currentSession.completionStatus !== 'active' || this.hasRecordedCompletion) {
       return this.currentSession ? { ...this.currentSession } : null;
     }
 

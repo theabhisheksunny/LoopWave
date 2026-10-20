@@ -22,7 +22,8 @@ export const AppSettingsSchema = z.object({
   defaultDelaySeconds: z.number().min(0).max(3600),
   defaultVolume: z.number().min(0).max(100),
   autoPlay: z.boolean(),
-  hardwareAcceleration: z.boolean()
+  hardwareAcceleration: z.boolean(),
+  randomizedDelayEnabled: z.boolean().optional().default(false)
 });
 
 export const PlaybackSessionSchema = z.object({
@@ -102,6 +103,7 @@ export interface LoopWaveApi {
   importData: (content: string, type: 'library' | 'json') => Promise<{ success: boolean; importedCount?: number; error?: string }>;
   inspectUrl: (url: string) => Promise<UrlInspectionResult>;
   openExternal: (url: string) => Promise<{ success: boolean }>;
+  openFileDialog: () => Promise<{ canceled: boolean; filePaths: string[] }>;
   getStoragePolicy: () => Promise<StoragePolicyStatus>;
   minimizeWindow: () => Promise<void>;
   maximizeWindow: () => Promise<void>;

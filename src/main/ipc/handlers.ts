@@ -230,6 +230,27 @@ export function registerIpcHandlers(dbManager: DatabaseManager): void {
     return { success: true };
   });
 
+  // --- Local Media File Picker Dialog ---
+  ipcMain.handle(IPC_CHANNELS.DIALOG_OPEN_FILE, async (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return { canceled: true, filePaths: [] };
+    const result = await dialog.showOpenDialog(win, {
+      title: 'Select Local Media File to Play Directly',
+      properties: ['openFile'],
+      filters: [
+        {
+          name: 'All Media Files',
+          extensions: ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v', 'mp3', 'wav', 'aac', 'flac', 'm4a', 'm3u8']
+        },
+        { name: 'Video Files (*.mp4, *.webm, *.mov)', extensions: ['mp4', 'webm', 'ogg', 'ogv', 'mov', 'm4v'] },
+        { name: 'Audio Files (*.mp3, *.wav, *.flac)', extensions: ['mp3', 'wav', 'aac', 'flac', 'm4a'] },
+        { name: 'HLS Playlists (*.m3u8)', extensions: ['m3u8'] },
+        { name: 'All Files (*.*)', extensions: ['*'] }
+      ]
+    });
+    return result;
+  });
+
   // --- Window Control IPC ---
   ipcMain.handle(IPC_CHANNELS.WINDOW_MINIMIZE, (event) => {
     const win = BrowserWindow.fromWebContents(event.sender);

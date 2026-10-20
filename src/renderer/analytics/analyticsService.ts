@@ -76,6 +76,10 @@ export class AnalyticsService {
       metadata: metadata?.customData
     };
 
+    // Cap in-memory deduplication set to avoid unbounded RAM growth
+    if (this.recordedEventIds.size > 50) {
+      this.recordedEventIds.clear();
+    }
     this.recordedEventIds.add(eventId);
     this.lastRecordedEvent = {
       sessionId: session.sessionId,

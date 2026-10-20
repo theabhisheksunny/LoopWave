@@ -101,9 +101,15 @@ describe('SourceResolver', () => {
       expect(res.error).toBeDefined();
     });
 
-    it('rejects non-http/https protocols like file: and javascript:', () => {
+    it('resolves local media files (file:// URLs and direct file paths)', () => {
       const resFile = resolveSource('file:///C:/video.mp4');
-      expect(resFile.success).toBe(false);
+      expect(resFile.success).toBe(true);
+      expect(resFile.source?.sourceType).toBe('direct-video');
+      expect(resFile.source?.canonicalUrl).toContain('/local-media?path=');
+
+      const resWin = resolveSource('D:\\media\\music.mp3');
+      expect(resWin.success).toBe(true);
+      expect(resWin.source?.sourceType).toBe('direct-audio');
 
       const resJs = resolveSource('javascript:alert(1)');
       expect(resJs.success).toBe(false);

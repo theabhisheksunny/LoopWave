@@ -2,13 +2,14 @@ import { AppSettings } from './types';
 
 export const DEFAULT_SETTINGS: AppSettings = {
   privateMode: false,
-  persistAnalytics: true,
+  persistAnalytics: false, // RAM-first default: Zero session persistence to disk unless opted in
   analyticsRetentionDays: 30,
   defaultLoopMode: 'off',
   defaultDelaySeconds: 2,
   defaultVolume: 80,
   autoPlay: true,
-  hardwareAcceleration: true
+  hardwareAcceleration: true,
+  randomizedDelayEnabled: false
 };
 
 /**

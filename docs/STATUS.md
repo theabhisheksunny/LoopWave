@@ -1,6 +1,6 @@
 # LoopWave — Project Status
 
-**Current Status**: Playback & Pipeline Repair, Full Application Regression Audit Complete & Verified (Version 1.0.0)  
+**Current Status**: Full Floating-Point Random Delay Precision Complete & Verified (Version 1.0.0)  
 **Last Updated**: 2026-10-20  
 **Environment**: Windows 11 x64, Node.js v24.14.0, npm 11.9.0, Python 3.12.10, Electron 32.3.3  
 
@@ -24,6 +24,10 @@
 | **Phase 12** | Strict Repository-Wide Deep Cleanup & Quality Audit | COMPLETE | Eliminated 9 dead/obsolete files (5 unreferenced prototype components, 1 scratch test script, 3 redundant screenshot assets); added `clearListeners()` to `PlaybackAdapter` interface; eliminated all unused imports and parameters across main, preload, renderer, and test files; verified zero TypeScript errors with `--noUnusedLocals` and `--noUnusedParameters`; verified 99/99 passing Vitest tests and 15/15 passing Playwright Electron E2E tests; repackaged verified production binary. |
 | **Phase 13** | Phase 2 Forensic Hygiene, Artifact Lifecycle & Candidate Manifest | COMPLETE | Eliminated duplicate screenshot generation at source in `electronE2e.mjs`; removed unreferenced duplicate screenshots (`06_library_1280px.png`, `10_playlist_1280px.png`); strengthened `.gitignore` with Playwright/Vitest test artifact rules; added standardized `"test:e2e"` script in `package.json`; added complete window IPC mocks in `setup.ts`; verified all 15 Playwright E2E and 99 Vitest tests pass with 0 regressions. |
 | **Phase 14** | YouTube Shorts Regression Repair, UI Proportions & Action Buttons | COMPLETE | Verified unembeddable YouTube Shorts link (`kwXZjR5phcc`) error classification (`YT_ERROR_150`) and active "Open on YouTube" external fallback; standardized error action buttons to 36px (`h-9`) height with scrollable container preventing clipping; balanced main player vertical spacing (`gap-3.5`) and queue alignment; responsive CurrentMediaInfo URL truncation and status code badge; 101/101 passing Vitest tests and 15/15 passing Playwright E2E tests; verified packaged binary. |
+| **Phase 15** | YouTube End-to-End Investigation, Error Differentiation & Lifecycle Repair | COMPLETE | Diagnosed YouTube embedding restrictions end to end in real Electron runtime; explicitly differentiated error codes 150/101 (owner embedding restriction), 152 (embed origin configuration restriction), 153 (missing Referer / client ID), 100 (not found/private), and application errors; repaired lifecycle defect in `sessionManager.ts` preventing failed sessions from ever transitioning to completed; added Retry reinitialization and external fallback regression tests; verified native playback against YouTube Developer and public creative commons streams; 108/108 passing Vitest tests and 17/17 passing Playwright E2E tests; repackaged verified production binary. |
+| **Phase 16** | RAM-First Direct Playback, Local Media Streaming & Zero Unnecessary Persistence | COMPLETE | Local media files stream directly from source via HTTP 206 Partial Content byte ranges without temp file copies or caching; added native Open File dialog integration; persistAnalytics defaulted to false ensuring zero SQLite writes during playback; bounded AnalyticsService event IDs (max 50); implemented AbortController listener unbinding, blob: revocation, and hls.detachMedia() teardown in DirectMediaAdapter; added sessionManager.reset(); verified -146 MB RAM reduction after source switches and 0 B DB growth; 113/113 passing Vitest tests and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
+| **Phase 17** | Randomized Delay Scheduling (0–10 Seconds) & Live Integration Repair | COMPLETE | Fixed randomized delay integration across real consuming operations: LoopController playback cycle looping and StorageDb retention maintenance; live settings synchronization from SettingsScreen to running playerStore without application restart; fresh random delay per eligible cycle (0–10,000 ms); zero delay when disabled; cancellation on pause/stop/disposal; 141/141 passing Vitest tests across 17 test suites and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
+| **Phase 18** | Full Floating-Point Random Delay Precision | COMPLETE | Upgraded entire randomized delay pipeline to preserve unrounded fractional-second precision (e.g. 2.99970s, 9.12353s, 0.23741s, 6.78934s, 1.00001s); high-resolution timing via performance.now(); smooth 50ms countdown ticker without render saturation; dedicated UI formatting with up to 5 decimal places for selected delay and 3 decimal places for remaining time; 144/144 passing Vitest tests and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
 
 ---
 
@@ -31,28 +35,31 @@
 
 ### 1. Vitest Suite
 - **Framework**: Vitest v3.2.7
-- **Test Files**: 15 passed (15 total)
-- **Tests**: 101 passed (101 total)
+- **Test Files**: 17 passed (17 total)
+- **Tests**: 144 passed (144 total)
 - **Failures**: 0
 
 ### 2. Playwright Electron End-to-End Suite
 - **Script**: `tests/e2e/electronE2e.mjs`
-- **Scenarios**: 15 passed (15 total)
+- **Scenarios**: 18 passed (18 total)
   1. `Primary Simplified UI Layout (Responsive 1024/1280/1440px)`: PASS
   2. `YouTube Unembeddable Error & Fallback (kwXZjR5phcc)`: PASS
-  3. `YouTube Embeddable Playback (M7lc1UVf-VE)`: PASS
-  4. `Direct MP4 Video Playback (flower.mp4)`: PASS
-  5. `Direct WebM Video Playback (flower.webm)`: PASS
-  6. `Direct Audio Playback (t-rex-roar.mp3)`: PASS
-  7. `Live HLS Stream Playback (x36xhzz.m3u8)`: PASS
-  8. `Loop Mode Cycling (Off -> Repeat 1 -> Repeat All)`: PASS
-  9. `Queue Addition & Display`: PASS
-  10. `Playlist & Queue Polish (Phase 2.1)`: PASS
-  11. `Media Library Visual Polish & Verification (Phase 3.1)`: PASS
-  12. `Playback Analytics Dashboard Redesign & Verification (Phase 4)`: PASS
-  13. `Settings & Privacy UI Redesign & Verification (Phase 5)`: PASS
-  14. `Secondary Overlays (Playlist, Library, Analytics, Settings, About)`: PASS
-  15. `Packaged Windows Executable (Live Direct Binary Launch & Playback Smoke Test)`: PASS
+  3. `YouTube Second Unembeddable Fallback (n2YGWiRRxEs)`: PASS
+  4. `Local Direct Media Playback (sample_local.mp4)`: PASS
+  5. `YouTube Embeddable Playback (M7lc1UVf-VE)`: PASS
+  6. `YouTube Second Embeddable Playback (jNQXAC9IVRw)`: PASS
+  7. `Direct MP4 Video Playback (flower.mp4)`: PASS
+  8. `Direct WebM Video Playback (flower.webm)`: PASS
+  9. `Direct Audio Playback (t-rex-roar.mp3)`: PASS
+  10. `Live HLS Stream Playback (x36xhzz.m3u8)`: PASS
+  11. `Loop Mode Cycling (Off -> Repeat 1 -> Repeat All)`: PASS
+  12. `Queue Addition & Display`: PASS
+  13. `Playlist & Queue Polish (Phase 2.1)`: PASS
+  14. `Media Library Visual Polish & Verification (Phase 3.1)`: PASS
+  15. `Playback Analytics Dashboard Redesign & Verification (Phase 4)`: PASS
+  16. `Settings & Privacy UI Redesign & Verification (Phase 5)`: PASS
+  17. `Secondary Overlays (Playlist, Library, Analytics, Settings, About)`: PASS
+  18. `Packaged Windows Executable (Live Direct Binary Launch & Playback Smoke Test)`: PASS
 - **Console Errors / Network Failures**: 0 errors, 0 failed network requests.
 - **Visual Verification**: Fully verified across 1024px, 1280px, and 1440px desktop viewports with 0 layout collisions.
 
@@ -60,6 +67,6 @@
 
 ## Packaged Windows Release
 - **Executable**: `release/win-unpacked/LoopWave.exe` (~186 MB)
-- **SHA-256 Checksum**: `351538B911CE20B0F197E1F01ADA0D580CBBCB482AAB746EE747F526FF293605`
+- **SHA-256 Checksum**: `728B9E51963623BF04D428D218A27C4620D8C67E9B35E58D06947359EE22CE61`
 - **Architecture**: Windows x64
 - **Startup verified**: Launches and runs production build cleanly from standalone binary (`PACKAGED_LAUNCH_OK`, `READYSTATE_4_PLAYBACK_VERIFIED`).

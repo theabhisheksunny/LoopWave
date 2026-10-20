@@ -241,12 +241,16 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
         message = 'The requested video was not found, is private, or has been removed.';
         break;
       case 101:
+        message = 'The video owner does not allow embedded playback outside YouTube. Use "Open on YouTube" to watch directly.';
+        break;
       case 150:
-        message = 'The video owner does not allow embedded playback. Use "Open on YouTube" to watch directly.';
+        message = 'The video owner does not allow embedded playback (error 150). Use "Open on YouTube" to watch directly.';
         break;
       case 152:
+        message = 'Playback restricted by embed origin configuration (error 152). Use "Open on YouTube" to watch.';
+        break;
       case 153:
-        message = 'Playback restricted or embedder identity verification failed. Use "Open on YouTube" to watch.';
+        message = 'Missing Referer or API client identification required by YouTube (error 153). Use "Open on YouTube" to watch.';
         break;
       default:
         message = `YouTube playback error (${errorCode}).`;

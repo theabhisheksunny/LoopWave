@@ -23,6 +23,9 @@ export const PlayerControls: React.FC = () => {
     capabilities,
     loopMode,
     interLoopDelaySeconds,
+    randomizedDelayEnabled,
+    countdownRemaining,
+    selectedDelaySeconds,
     queue,
     currentQueueIndex,
     play,
@@ -141,33 +144,68 @@ export const PlayerControls: React.FC = () => {
               title="Configurable delay between playback cycles"
             >
               <Clock className="w-3 h-3 text-[#18D8E8]" />
-              <span>{interLoopDelaySeconds}s delay</span>
+              <span>
+                {randomizedDelayEnabled
+                  ? countdownRemaining > 0
+                    ? `${countdownRemaining.toFixed(3)}s remaining`
+                    : selectedDelaySeconds !== null
+                    ? `Random: ${selectedDelaySeconds.toFixed(5)}s`
+                    : 'Random: 0–10s'
+                  : `${interLoopDelaySeconds}s delay`}
+              </span>
             </button>
 
             {isDelayOpen && (
-              <div className="absolute bottom-full mb-2 left-0 w-44 p-2 bg-[#18243A] border border-[#293750] rounded-xl shadow-2xl space-y-2 z-40">
-                <span className="text-[10px] uppercase font-semibold text-[#A5B4CF] block px-1">
-                  Delay Between Loops
-                </span>
-                <div className="grid grid-cols-3 gap-1">
-                  {delayPresets.map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => {
-                        setInterLoopDelay(d);
-                        setIsDelayOpen(false);
-                      }}
-                      className={`text-xs py-1 rounded-md font-mono ${
-                        interLoopDelaySeconds === d
-                          ? 'bg-[#18D8E8]/20 text-[#18D8E8] border border-[#18D8E8]/40'
-                          : 'bg-[#101827] text-[#A5B4CF] hover:text-white'
-                      }`}
-                    >
-                      {d}s
-                    </button>
-                  ))}
-                </div>
+              <div className="absolute bottom-full mb-2 left-0 w-52 p-2.5 bg-[#18243A] border border-[#293750] rounded-xl shadow-2xl space-y-2 z-40">
+                {randomizedDelayEnabled ? (
+                  <div className="space-y-1.5 p-1 font-mono text-xs">
+                    <span className="text-[10px] uppercase font-semibold text-cyan-300 block">
+                      Randomized Delay Active
+                    </span>
+                    <div className="text-[11px] text-[#F5F7FF] flex items-center justify-between">
+                      <span className="text-slate-400">Selected:</span>
+                      <span className="font-bold text-cyan-300">
+                        {selectedDelaySeconds !== null ? `${selectedDelaySeconds.toFixed(5)}s` : 'Pending loop'}
+                      </span>
+                    </div>
+                    {countdownRemaining > 0 && (
+                      <div className="text-[11px] text-[#F5F7FF] flex items-center justify-between">
+                        <span className="text-slate-400">Remaining:</span>
+                        <span className="font-bold text-amber-300">
+                          {countdownRemaining.toFixed(3)}s
+                        </span>
+                      </div>
+                    )}
+                    <p className="text-[10px] text-[#A5B4CF] leading-tight pt-1 border-t border-[#293750]/60">
+                      Floating-point precision (0–10s) active across loop cycles without whole-second rounding.
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <span className="text-[10px] uppercase font-semibold text-[#A5B4CF] block px-1">
+                      Delay Between Loops
+                    </span>
+                    <div className="grid grid-cols-3 gap-1">
+                      {delayPresets.map((d) => (
+                        <button
+                          key={d}
+                          type="button"
+                          onClick={() => {
+                            setInterLoopDelay(d);
+                            setIsDelayOpen(false);
+                          }}
+                          className={`text-xs py-1 rounded-md font-mono ${
+                            interLoopDelaySeconds === d
+                              ? 'bg-[#18D8E8]/20 text-[#18D8E8] border border-[#18D8E8]/40'
+                              : 'bg-[#101827] text-[#A5B4CF] hover:text-white'
+                          }`}
+                        >
+                          {d}s
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
               </div>
             )}
           </div>

@@ -11,6 +11,7 @@ import type {
   StoragePolicyStatus
 } from '../../shared/types';
 import { DEFAULT_SETTINGS } from '../../shared/defaults';
+import { scheduleRandomDelay, ScheduledDelayTask } from '../../shared/randomDelay';
 
 export class DatabaseManager {
   private SQL: SqlJsStatic | null = null;
@@ -18,6 +19,7 @@ export class DatabaseManager {
   private dbFilePath: string | null = null;
   private cachedSettings: AppSettings = { ...DEFAULT_SETTINGS };
   private isInitialized = false;
+  private pendingMaintenanceTask: ScheduledDelayTask | null = null;
 
   async init(userDataPath?: string): Promise<void> {
     if (this.isInitialized) return;
@@ -46,7 +48,7 @@ export class DatabaseManager {
 
     this.createSchema();
     this.loadSettings();
-    this.applyRetention();
+    this.scheduleRetentionMaintenance();
     this.isInitialized = true;
   }
 
@@ -150,6 +152,10 @@ export class DatabaseManager {
       } catch (err) {
         console.error('Failed to persist settings:', err);
       }
+    }
+
+    if (partial.analyticsRetentionDays !== undefined || partial.randomizedDelayEnabled !== undefined) {
+      this.scheduleRetentionMaintenance();
     }
 
     return { ...this.cachedSettings };
@@ -333,7 +339,8 @@ export class DatabaseManager {
 
   public recordAnalyticsSession(session: PlaybackSession): void {
     if (!this.db) return;
-    if (!this.cachedSettings.persistAnalytics && !this.cachedSettings.privateMode) {
+    // RAM-first policy: If analytics persistence is disabled (default), do not store session records
+    if (!this.cachedSettings.persistAnalytics) {
       return;
     }
 
@@ -367,7 +374,8 @@ export class DatabaseManager {
 
   public recordAnalyticsEvent(event: AnalyticsEvent): void {
     if (!this.db) return;
-    if (!this.cachedSettings.persistAnalytics && !this.cachedSettings.privateMode) {
+    // RAM-first policy: If analytics persistence is disabled (default), do not store event records
+    if (!this.cachedSettings.persistAnalytics) {
       return;
     }
 
@@ -623,6 +631,42 @@ export class DatabaseManager {
       }
     } catch (err) {
       console.warn('Failed to apply analytics retention:', err);
+    }
+  }
+
+  public scheduleRetentionMaintenance(signal?: AbortSignal): ScheduledDelayTask {
+    if (this.pendingMaintenanceTask && !this.pendingMaintenanceTask.isCancelled) {
+      this.pendingMaintenanceTask.cancel();
+      this.pendingMaintenanceTask = null;
+    }
+
+    const enabled = Boolean(this.cachedSettings.randomizedDelayEnabled);
+    const task = scheduleRandomDelay(
+      () => {
+        this.applyRetention();
+        this.pendingMaintenanceTask = null;
+      },
+      {
+        minMs: 0,
+        maxMs: 10_000,
+        enabled,
+        signal,
+        operationName: 'storage-retention-maintenance'
+      }
+    );
+
+    this.pendingMaintenanceTask = task;
+    return task;
+  }
+
+  public getLastScheduledDelayMs(): number | null {
+    return this.pendingMaintenanceTask ? this.pendingMaintenanceTask.delayMs : null;
+  }
+
+  public dispose(): void {
+    if (this.pendingMaintenanceTask) {
+      this.pendingMaintenanceTask.cancel();
+      this.pendingMaintenanceTask = null;
     }
   }
 

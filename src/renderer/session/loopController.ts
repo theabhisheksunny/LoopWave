@@ -1,18 +1,22 @@
 import { LoopMode, QueueItem, ResolvedSource } from '../../shared/types';
 import { PlaybackSessionManager } from './sessionManager';
+import { scheduleRandomDelay, ScheduledDelayTask } from '../../shared/randomDelay';
 
 export interface LoopControllerCallbacks {
   onRestartCurrentSource: (source: ResolvedSource) => Promise<void>;
   onPlayNextQueueItem: (nextItem: QueueItem, nextIndex: number) => Promise<void>;
-  onDelayTick?: (secondsRemaining: number) => void;
+  onDelayTick?: (secondsRemaining: number, selectedDelaySeconds?: number) => void;
 }
 
 export class LoopController {
   private loopMode: LoopMode = 'off';
   private interLoopDelaySeconds = 2;
+  private randomizedDelayEnabled = false;
   private pendingTimer: any = null;
   private countdownInterval: any = null;
   private isWaitingForLoop = false;
+  private activeScheduledTask: ScheduledDelayTask | null = null;
+  private lastScheduledDelayMs: number | null = null;
 
   private queue: QueueItem[] = [];
   private currentQueueIndex = -1;
@@ -40,6 +44,18 @@ export class LoopController {
 
   public getInterLoopDelay(): number {
     return this.interLoopDelaySeconds;
+  }
+
+  public setRandomizedDelayEnabled(enabled: boolean): void {
+    this.randomizedDelayEnabled = enabled;
+  }
+
+  public isRandomizedDelayEnabled(): boolean {
+    return this.randomizedDelayEnabled;
+  }
+
+  public getLastScheduledDelayMs(): number | null {
+    return this.lastScheduledDelayMs;
   }
 
   public setQueue(queue: QueueItem[], startIndex = 0): void {
@@ -128,23 +144,90 @@ export class LoopController {
   private scheduleLoopRestart(action: () => void): void {
     this.cancelPendingLoop();
 
+    if (this.randomizedDelayEnabled) {
+      this.isWaitingForLoop = true;
+
+      // Generates a fresh unrounded random delay (0 to 10,000 ms) for every eligible loop cycle
+      const task = scheduleRandomDelay(
+        () => {
+          this.clearTimers();
+          this.isWaitingForLoop = false;
+          this.activeScheduledTask = null;
+          if (this.callbacks.onDelayTick) {
+            this.callbacks.onDelayTick(0, task.delayMs / 1000);
+          }
+          action();
+        },
+        {
+          minMs: 0,
+          maxMs: 10_000,
+          enabled: true,
+          operationName: 'playback-loop-cycle'
+        }
+      );
+
+      this.activeScheduledTask = task;
+      this.lastScheduledDelayMs = task.delayMs;
+      const selectedDelaySec = task.delayMs / 1000;
+
+      if (task.delayMs <= 0) {
+        this.isWaitingForLoop = false;
+        this.activeScheduledTask = null;
+        if (this.callbacks.onDelayTick) {
+          this.callbacks.onDelayTick(0, 0);
+        }
+        return;
+      }
+
+      const startPerf = typeof performance !== 'undefined' ? performance.now() : Date.now();
+      const totalDelayMs = task.delayMs;
+
+      // Initial tick with exact fractional selected delay
+      if (this.callbacks.onDelayTick) {
+        this.callbacks.onDelayTick(selectedDelaySec, selectedDelaySec);
+      }
+
+      // Smooth, non-framerate-saturating countdown updates every 50ms (preserves fractional precision)
+      this.countdownInterval = setInterval(() => {
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        const elapsed = now - startPerf;
+        const remainingMs = Math.max(0, totalDelayMs - elapsed);
+        const remainingSec = remainingMs / 1000;
+
+        if (this.callbacks.onDelayTick) {
+          this.callbacks.onDelayTick(remainingSec, selectedDelaySec);
+        }
+
+        if (remainingMs <= 0) {
+          this.clearTimers();
+        }
+      }, 50);
+
+      return;
+    }
+
     const delaySec = this.interLoopDelaySeconds;
     if (delaySec <= 0) {
+      this.lastScheduledDelayMs = 0;
+      if (this.callbacks.onDelayTick) {
+        this.callbacks.onDelayTick(0, 0);
+      }
       action();
       return;
     }
 
     this.isWaitingForLoop = true;
+    this.lastScheduledDelayMs = delaySec * 1000;
     let remaining = delaySec;
 
     if (this.callbacks.onDelayTick) {
-      this.callbacks.onDelayTick(remaining);
+      this.callbacks.onDelayTick(remaining, delaySec);
     }
 
     this.countdownInterval = setInterval(() => {
       remaining -= 1;
       if (remaining >= 0 && this.callbacks.onDelayTick) {
-        this.callbacks.onDelayTick(remaining);
+        this.callbacks.onDelayTick(remaining, delaySec);
       }
     }, 1000);
 
@@ -152,18 +235,22 @@ export class LoopController {
       this.clearTimers();
       this.isWaitingForLoop = false;
       if (this.callbacks.onDelayTick) {
-        this.callbacks.onDelayTick(0);
+        this.callbacks.onDelayTick(0, delaySec);
       }
       action();
     }, delaySec * 1000);
   }
 
   public cancelPendingLoop(): void {
+    if (this.activeScheduledTask && !this.activeScheduledTask.isCancelled) {
+      this.activeScheduledTask.cancel();
+      this.activeScheduledTask = null;
+    }
     this.clearTimers();
     if (this.isWaitingForLoop) {
       this.isWaitingForLoop = false;
       if (this.callbacks.onDelayTick) {
-        this.callbacks.onDelayTick(0);
+        this.callbacks.onDelayTick(0, 0);
       }
     }
   }
@@ -187,5 +274,6 @@ export class LoopController {
     this.cancelPendingLoop();
     this.queue = [];
     this.currentSource = null;
+    this.lastScheduledDelayMs = null;
   }
 }
