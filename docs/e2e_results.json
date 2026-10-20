@@ -33,12 +33,12 @@
     {
       "test": "Queue Addition & Display",
       "status": "PASS",
-      "details": "Queue item added and displayed on main screen. Count=1."
+      "details": "Queue item added and displayed on main screen. Count=6."
     },
     {
-      "test": "Secondary Overlays (Library, Analytics, Settings, About)",
+      "test": "Secondary Overlays (Playlist, Library, Analytics, Settings, About)",
       "status": "PASS",
-      "details": "All 4 secondary panels open as non-destructive overlays and close via Escape or X button."
+      "details": "All 5 secondary panels open as non-destructive overlays and close via Escape or X button."
     },
     {
       "test": "Packaged Windows Executable",

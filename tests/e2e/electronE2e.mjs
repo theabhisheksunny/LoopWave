@@ -235,8 +235,16 @@ async function runE2e() {
     results.push({ test: 'UI Controls & Interactions', status: 'FAIL', details: err.message });
   }
 
-  // 7. Non-Destructive Modals (Library, Analytics, Settings, About)
+  // 7. Non-Destructive Modals (Playlist, Library, Analytics, Settings, About)
   try {
+    // Open Playlist
+    await page.click('button:has-text("Playlist")');
+    await page.waitForTimeout(500);
+    const s10 = path.join(rootDir, 'docs/screenshots/10_playlist_screen.png');
+    await page.screenshot({ path: s10 });
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(400);
+
     // Open Library
     await page.click('button:has-text("Library")');
     await page.waitForTimeout(500);
@@ -270,9 +278,9 @@ async function runE2e() {
     await page.waitForTimeout(400);
 
     results.push({
-      test: 'Secondary Overlays (Library, Analytics, Settings, About)',
+      test: 'Secondary Overlays (Playlist, Library, Analytics, Settings, About)',
       status: 'PASS',
-      details: 'All 4 secondary panels open as non-destructive overlays and close via Escape or X button.'
+      details: 'All 5 secondary panels open as non-destructive overlays and close via Escape or X button.'
     });
   } catch (err) {
     results.push({ test: 'Secondary Overlays', status: 'FAIL', details: err.message });

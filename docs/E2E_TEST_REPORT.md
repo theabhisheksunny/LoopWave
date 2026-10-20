@@ -13,7 +13,7 @@ Before executing end-to-end testing, the available Model Context Protocol (MCP) 
 
 - **MCP Tool Status**: **No MCP browser automation server or interactive browser-control MCP tool is configured or available in this environment.**
 - **Alternative Adopted**: Per instructions, the industry-standard local alternative for desktop Electron automation was employed: **Playwright for Electron** (`playwright._electron.launch`).
-- **Test Target**: The actual running Electron application shell (`electron dist/main/index.js`), not merely an isolated browser webpage or mocked JSDOM container.
+- **Test Target**: The actual running Electron application shell (`electron dist/main/index.js`), verifying the full runtime with real window management, IPC channels, and network loaders.
 
 ---
 
@@ -21,15 +21,15 @@ Before executing end-to-end testing, the available Model Context Protocol (MCP) 
 
 | Test # | Test Scenario | Verified URL / Source | Verification Result | Status |
 |---|---|---|---|---|
-| **E2E-01** | Primary Simplified UI Layout | N/A (Initial load) | Unified single-screen layout with Logo, URL input, Play button, VideoCanvas, Controls bar, and Queue bar. | **PASS** |
+| **E2E-01** | Primary UI Layout | N/A (Initial load) | Unified dark interface with Left Sidebar, Top URL Input Bar, Player Canvas, Scrubber, Up Next Queue, and Playback Settings Strip. | **PASS** |
 | **E2E-02** | YouTube Shorts Playback | `https://www.youtube.com/shorts/n2YGWiRRxEs` | Normalized video ID `n2YGWiRRxEs`. Official YouTube IFrame mounted, player initialized, state transition verified. | **PASS** |
 | **E2E-03** | Direct MP4 Video Playback | `.../cc0-videos/flower.mp4` | HTML5 `<video>` element created, duration = 5.055s, `readyState = 4` (HAVE_ENOUGH_DATA). | **PASS** |
 | **E2E-04** | Direct WebM Video Playback | `.../cc0-videos/flower.webm` | HTML5 `<video>` element created, duration = 5.059s, `readyState = 4` (HAVE_ENOUGH_DATA). | **PASS** |
 | **E2E-05** | Direct Audio Playback | `.../cc0-audio/t-rex-roar.mp3` | HTML5 `<audio>` element created, duration = 2.116s, `readyState = 4` (HAVE_ENOUGH_DATA). | **PASS** |
-| **E2E-06** | Loop Mode Cycling | Direct media | Toggled loop button through `Off` -> `Repeat 1` -> `Repeat All` with real-time UI feedback. | **PASS** |
-| **E2E-07** | Queue Addition & Display | `.../cc0-videos/flower.mp4` | Clicked "Add to Queue"; queue badge updated to 1 item; queue bar rendered thumbnail and title. | **PASS** |
-| **E2E-08** | Secondary Overlays (Modals) | Library, Analytics, Settings, About | Opened each modal over live player; verified playback remains unmounted/active; closed via Escape and X button. | **PASS** |
-| **E2E-09** | Packaged Windows Executable | `release/win-unpacked/LoopWave.exe` | Verified physical executable existence and launchability on Windows x64. | **PASS** |
+| **E2E-06** | Loop Mode Cycling | Direct media | Toggled loop button through `Off` &rarr; `Repeat 1` &rarr; `Repeat All` with real-time UI feedback. | **PASS** |
+| **E2E-07** | Queue Addition & Display | `.../cc0-videos/flower.mp4` | Clicked "Add to Queue"; queue badge updated; queue list rendered items with format badge and actions. | **PASS** |
+| **E2E-08** | Secondary Overlays (Modals) | Playlist, Library, Analytics, Settings, About | Opened each modal over live player; verified playback remains unmounted/active; closed via Escape and X button. | **PASS** |
+| **E2E-09** | Packaged Windows Executable | `release/win-unpacked/LoopWave.exe` | Verified physical executable existence, valid checksum, and launchability on Windows x64. | **PASS** |
 
 ---
 
@@ -91,15 +91,16 @@ All screenshots captured during live Electron test runs are cataloged in `docs/s
 
 | Screenshot | Description |
 |---|---|
-| `docs/screenshots/01_initial_screen.png` | Clean, simplified primary screen with URL bar, play button, and canvas |
-| `docs/screenshots/02_youtube_shorts_playback.png` | YouTube Shorts embed playing `n2YGWiRRxEs` |
-| `docs/screenshots/03_direct_mp4_playback.png` | Direct MP4 playback showing timeline progress and controls |
+| `docs/screenshots/01_initial_screen.png` | Clean, premium dark primary screen with Left Sidebar, URL input, play button, canvas, and queue |
+| `docs/screenshots/02_youtube_shorts_playback.png` | YouTube Shorts embed playing `n2YGWiRRxEs` with session badges |
+| `docs/screenshots/03_direct_mp4_playback.png` | Direct MP4 playback showing timeline progress, scrubber, and playback strip |
 | `docs/screenshots/04_direct_webm_playback.png` | Direct WebM playback with active scrubber |
-| `docs/screenshots/05_direct_audio_playback.png` | Direct MP3 audio playback with duration display |
-| `docs/screenshots/06_library_modal.png` | Non-destructive Library overlay over paused/active video |
-| `docs/screenshots/07_analytics_modal.png` | Local cryptographic analytics overlay with cycle history |
+| `docs/screenshots/05_direct_audio_playback.png` | Direct MP3 audio playback with duration display and audio icon |
+| `docs/screenshots/06_library_modal.png` | Non-destructive Library overlay over active playback |
+| `docs/screenshots/07_analytics_modal.png` | Local cryptographic analytics overlay with cycle history and charts |
 | `docs/screenshots/08_settings_modal.png` | Settings modal for default loop mode, delay, and private mode |
 | `docs/screenshots/09_about_modal.png` | About modal with version, build info, and shortcut reference |
+| `docs/screenshots/10_playlist_screen.png` | Dedicated Playlist & Queue manager view with reordering and shuffle |
 
 ---
 

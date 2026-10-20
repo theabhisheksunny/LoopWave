@@ -2,32 +2,45 @@
 
 This document records the verification status of every interactive control, button, input, toggle, and keyboard shortcut across the LoopWave desktop application.
 
-| Control / Interaction | Location | Expected Behavior | Observed Result | Status |
+| Control / Interaction | Component | Expected Behavior | Observed Result | Status |
 |---|---|---|---|---|
-| **URL Input Field** | Main Screen | Accepts text via typing or clipboard paste; validates URL dynamically. | Input receives focus, parses YouTube/Direct links, and displays detected source pill. | **PASS** |
-| **Primary Play Button** | Main Screen | Submits URL, initializes adapter, and mounts player canvas immediately. | Starts playback immediately without route switching or losing container element. | **PASS** |
-| **Queue Add Button (`+ Queue`)** | Main Screen | Adds parsed source to playback queue without interrupting current stream. | Adds item to queue list with title, video ID, and type. | **PASS** |
-| **Quick Preset Chips** | Main Screen | Fills URL input with verified test links (Shorts, Watch, MP4, WebM, MP3, HLS). | Updates input field instantly; triggers detection badge. | **PASS** |
-| **Play/Pause Toggle** | Control Bar | Toggles playback between `playing` and `paused` states. | Immediate icon switch (`Play` &harr; `Pause`), pauses/resumes audio/video. | **PASS** |
-| **Stop Button** | Control Bar | Stops playback, resets position to `00:00`, closes active session as `stopped`. | Cleans up playback, cancels pending timers, resets scrubber. | **PASS** |
-| **Seek Timeline Scrubber** | Control Bar | Drag or click to scrub through timeline. | Seeks immediately to target timestamp for both direct media and YouTube. | **PASS** |
-| **Volume Slider & Mute Toggle** | Control Bar | Adjusts audio level from 0% to 100%; mute toggles audio off/on. | Updates volume level; mute button toggles state and displays `VolumeX`. | **PASS** |
-| **Loop Mode Button** | Control Bar | Cycles between `Loop Off`, `Repeat 1` (cyan glow), and `Repeat All` (violet glow). | Cycles sequentially; updates session loop controller immediately. | **PASS** |
-| **Inter-Loop Delay Dropdown** | Control Bar | Configures delay between cycles (0s, 1s, 2s, 3s, 5s, 10s, 15s). | Updates delay state; displays countdown overlay when waiting for next cycle. | **PASS** |
-| **Playback Speed Selector** | Control Bar | Selects rate (0.25x, 0.5x, 0.75x, 1x, 1.25x, 1.5x, 1.75x, 2x). | Changes adapter playback rate when supported by source. | **PASS** |
-| **Fullscreen Button** | Control Bar | Toggles HTML5 / window fullscreen mode. | Expands canvas to fullscreen; exits on toggle or Escape. | **PASS** |
-| **Queue Item Reorder (Up/Down)** | Queue Bar | Moves track up or down in playlist order. | Reorders queue in state and updates visual sequence. | **PASS** |
-| **Queue Item Remove (`Trash`)** | Queue Bar | Removes individual track from queue. | Item is removed immediately; adjusts current index if needed. | **PASS** |
-| **Clear Queue Button** | Queue Bar | Empties playback queue. | Clears all queue items instantly. | **PASS** |
-| **Library Modal Trigger** | Header | Opens Personal Media Library as non-destructive overlay. | Opens overlay with saved bookmarks and collections without unmounting player. | **PASS** |
-| **Analytics Modal Trigger** | Header | Opens Local Analytics Dashboard as non-destructive overlay. | Opens overlay showing sessions, watch time, completion rates, and charts. | **PASS** |
-| **Settings Modal Trigger** | Header | Opens Settings & Privacy Policy panel. | Opens overlay with Private Mode toggle, retention setting, and purge tool. | **PASS** |
-| **About Modal Trigger** | Header | Opens System Architecture & Diagnostics panel. | Opens overlay with version, adapter status, and engine information. | **PASS** |
-| **Modal Close (`X` / `Escape`)** | Modals | Closes active overlay modal and returns to main player view. | Closes overlay instantly; active playback continues without interruption. | **PASS** |
-| **Window Minimize** | Header | Minimizes Electron desktop window to taskbar. | Minimizes window via `loopwaveApi.minimizeWindow()`. | **PASS** |
-| **Window Maximize** | Header | Toggles window maximization. | Maximizes or restores window via `loopwaveApi.maximizeWindow()`. | **PASS** |
-| **Window Close** | Header | Closes window and terminates process. | Cleanly closes Electron window and exits app. | **PASS** |
-| **Keyboard: Space** | Global | Toggles play/pause (when not focused on input). | Pauses when playing; resumes when paused. | **PASS** |
+| **App Logo / Brand Click** | `AppSidebar` | Navigates directly to Home player workspace. | Sets currentRoute to `'home'` cleanly. | **PASS** |
+| **Home Nav Button** | `AppSidebar` | Displays Home player view with violet gradient indicator. | Highlights active state; renders main player view. | **PASS** |
+| **Playlist Nav Button** | `AppSidebar` | Opens full dedicated Playlist management view. | Opens Playlist screen with queue reordering, shuffle, and clear. | **PASS** |
+| **Library Nav Button** | `AppSidebar` | Opens Personal Media Library overlay. | Displays bookmarks, favorites, search, and collections. | **PASS** |
+| **Analytics Nav Button** | `AppSidebar` | Opens Local Analytics Dashboard overlay. | Displays sessions, cycles, watch-time charts, and JSON/CSV export. | **PASS** |
+| **Settings Nav Button** | `AppSidebar` | Opens Settings & Privacy configuration panel. | Displays looping preferences, private mode, retention, and diagnostics. | **PASS** |
+| **About Nav Button** | `AppSidebar` | Opens About & Diagnostics view pinned at sidebar bottom. | Displays version, architecture notes, and keyboard shortcuts table. | **PASS** |
+| **Mini Player Card** | `AppSidebar` | Shows current playing track, status, and loop badge; navigates to Home. | Returns user to player view; displays live playing badge. | **PASS** |
+| **URL Input Field** | `UrlInputBar` | Accepts text via typing/paste; validates link dynamically. | Updates state, detects source, and renders source badge (`YOUTUBE`, `MP4`, `WEBM`, `HLS`, `AUDIO`). | **PASS** |
+| **Clear Input (`X`)** | `UrlInputBar` | Clears URL input text and error feedback. | Empties input field immediately. | **PASS** |
+| **Primary Play Button** | `UrlInputBar` | Submits URL, initializes adapter, and mounts media in canvas. | Starts playback immediately without unmounting player canvas. | **PASS** |
+| **Queue Add Button** | `UrlInputBar` | Adds validated URL to playback queue. | Appends item to queue and displays temporary success message. | **PASS** |
+| **Quick Preset Chips** | `UrlInputBar` | Populates input with verified test links (Shorts, Watch, MP4, WebM, MP3, HLS). | Populates input field for inspection; validates format. | **PASS** |
+| **Player Viewport Canvas** | `VideoCanvas` | Mounts YouTube IFrame or HTML5 `<video>` / `<audio>` element. | Renders 16:9 media with dark background and zero stretching. | **PASS** |
+| **Loop Countdown Overlay** | `VideoCanvas` | Displays countdown during inter-loop delay period. | Shows animated countdown clock with live seconds. | **PASS** |
+| **Seek Timeline Scrubber** | `PlayerControls` | Draggable range input seeking within duration. | Updates playback position smoothly; shows `00:00 / 00:00`. | **PASS** |
+| **Up Next Queue Count** | `QueuePanel` | Shows count of queued tracks. | Badge updates in real time as items are added/removed. | **PASS** |
+| **Queue Shuffle Button** | `QueuePanel` | Shuffles order of queued tracks randomly. | Reorders queue items immediately using Fisher-Yates algorithm. | **PASS** |
+| **Queue Clear Button** | `QueuePanel` | Removes all tracks from queue. | Empties queue; displays clean empty state without stopping active playback. | **PASS** |
+| **Queue Item Play Now** | `QueuePanel` | Immediately loads and plays selected queue item. | Dispatches track to playback engine and marks item active. | **PASS** |
+| **Queue Item Reorder (Up/Down)** | `QueuePanel` | Moves track position up or down. | Swaps position in state and re-renders list. | **PASS** |
+| **Queue Item Remove (`Trash`)** | `QueuePanel` | Removes individual item from queue. | Removes item from array and recalculates active index. | **PASS** |
+| **Loop Mode Cycling Button** | `PlaybackSettings` | Cycles `Off` &rarr; `Repeat 1` (glow-violet) &rarr; `Repeat All` (glow-cyan). | Cycles sequentially; updates loop controller immediately. | **PASS** |
+| **Loop Delay Dropdown** | `PlaybackSettings` | Sets delay between loops (0s, 1s, 2s, 3s, 5s, 10s). | Updates inter-loop delay timer in session manager. | **PASS** |
+| **Previous Track** | `PlaybackSettings` | Restarts current media or moves to previous queue item. | Seeks to 0 or advances queue backwards. | **PASS** |
+| **Large Focal Play/Pause Button** | `PlaybackSettings` | Central glowing button toggling play and pause. | Toggles active media state; provides prominent visual feedback. | **PASS** |
+| **Stop Button** | `PlaybackSettings` | Stops playback, resets position to 0, cancels loop timers. | Halts media, cancels pending timers, marks session stopped. | **PASS** |
+| **Next Track** | `PlaybackSettings` | Advances to next queued track. | Loads next item in queue or loops to start if Repeat All. | **PASS** |
+| **Volume Slider & Mute Toggle** | `PlaybackSettings` | Adjusts volume from 0 to 100%; mute toggles audio off/on. | Updates volume level; mute button displays `VolumeX`. | **PASS** |
+| **Playback Speed Selector** | `PlaybackSettings` | Changes playback rate (0.5x, 0.75x, 1x, 1.25x, 1.5x, 2x). | Changes adapter playback rate when supported by source. | **PASS** |
+| **Picture-in-Picture** | `PlaybackSettings` | Enters PiP mode on supported video elements. | Invokes native PiP API on HTML5 video elements. | **PASS** |
+| **Fullscreen Button** | `PlaybackSettings` | Toggles window/element fullscreen mode. | Expands player to fullscreen; exits on toggle or Escape. | **PASS** |
+| **Copy Canonical URL** | `CurrentMediaInfo` | Copies active media URL to clipboard. | Copies link and flashes checkmark indicator. | **PASS** |
+| **Copy Session UUID** | `CurrentMediaInfo` | Copies cryptographically unique internal cycle UUID. | Writes UUID to clipboard and provides visual confirmation. | **PASS** |
+| **Modal Close (`X` / `Escape`)** | App Overlay | Closes secondary modal and returns to Home player view. | Closes overlay instantly; active playback continues uninterrupted. | **PASS** |
+| **Window Minimize / Maximize / Close** | `TitleBar` | Native Electron desktop window manipulation. | Dispatches IPC to Electron main window process. | **PASS** |
+| **Keyboard: Space** | Global | Toggles play/pause (when input is not focused). | Pauses when playing; resumes when paused. | **PASS** |
 | **Keyboard: Left/Right Arrow** | Global | Seeks &plusmn;5 seconds. | Jumps 5 seconds backward/forward. | **PASS** |
 | **Keyboard: Up/Down Arrow** | Global | Adjusts volume &plusmn;5%. | Increases/decreases volume by 5%. | **PASS** |
 | **Keyboard: M** | Global | Toggles mute on/off. | Mutes and restores previous volume. | **PASS** |

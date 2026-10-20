@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 
-export type AppRoute = 'main' | 'library' | 'analytics' | 'settings' | 'about';
+export type AppRoute = 'home' | 'main' | 'playlist' | 'library' | 'analytics' | 'settings' | 'about';
 
 interface NavigationState {
   currentRoute: AppRoute;
@@ -9,7 +9,7 @@ interface NavigationState {
 }
 
 export const useNavigationStore = create<NavigationState>((set) => ({
-  currentRoute: 'main',
-  setRoute: (route) => set({ currentRoute: route }),
-  closeModal: () => set({ currentRoute: 'main' })
+  currentRoute: 'home',
+  setRoute: (route) => set({ currentRoute: route === 'main' ? 'home' : route }),
+  closeModal: () => set({ currentRoute: 'home' })
 }));
