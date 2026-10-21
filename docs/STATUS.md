@@ -1,7 +1,7 @@
 # LoopWave — Project Status
 
-**Current Status**: Full Floating-Point Random Delay Precision Complete & Verified (Version 1.0.0)  
-**Last Updated**: 2026-10-20  
+**Current Status**: YouTube Playback Compatibility & Running Build Verification Complete (Version 1.0.0)  
+**Last Updated**: 2026-10-21  
 **Environment**: Windows 11 x64, Node.js v24.14.0, npm 11.9.0, Python 3.12.10, Electron 32.3.3  
 
 ---
@@ -28,6 +28,7 @@
 | **Phase 16** | RAM-First Direct Playback, Local Media Streaming & Zero Unnecessary Persistence | COMPLETE | Local media files stream directly from source via HTTP 206 Partial Content byte ranges without temp file copies or caching; added native Open File dialog integration; persistAnalytics defaulted to false ensuring zero SQLite writes during playback; bounded AnalyticsService event IDs (max 50); implemented AbortController listener unbinding, blob: revocation, and hls.detachMedia() teardown in DirectMediaAdapter; added sessionManager.reset(); verified -146 MB RAM reduction after source switches and 0 B DB growth; 113/113 passing Vitest tests and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
 | **Phase 17** | Randomized Delay Scheduling (0–10 Seconds) & Live Integration Repair | COMPLETE | Fixed randomized delay integration across real consuming operations: LoopController playback cycle looping and StorageDb retention maintenance; live settings synchronization from SettingsScreen to running playerStore without application restart; fresh random delay per eligible cycle (0–10,000 ms); zero delay when disabled; cancellation on pause/stop/disposal; 141/141 passing Vitest tests across 17 test suites and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
 | **Phase 18** | Full Floating-Point Random Delay Precision | COMPLETE | Upgraded entire randomized delay pipeline to preserve unrounded fractional-second precision (e.g. 2.99970s, 9.12353s, 0.23741s, 6.78934s, 1.00001s); high-resolution timing via performance.now(); smooth 50ms countdown ticker without render saturation; dedicated UI formatting with up to 5 decimal places for selected delay and 3 decimal places for remaining time; 144/144 passing Vitest tests and 18/18 passing Playwright E2E scenarios; repackaged standalone production binary. |
+| **Phase 19** | YouTube Compatibility, Adapter Lifecycle Gating & Running Build Verification | COMPLETE | Proved that `YT_ERROR_150` on `n2YGWiRRxEs` and `kwXZjR5phcc` is a genuine video ID restriction across all forms (/shorts/, /watch?v=, /embed/), while embeddable Shorts (`7Pq-S557XQU`) play natively; resolved adapter lifecycle race conditions via `currentLoadSessionId` session tokens; guaranteed synchronous cancellation of 15s `currentLoadTimeout`; clean DOM container teardown in `dispose()`; added `music.youtube.com` and `/live/` path support; verified bidirectional continuous error recovery in packaged binary (`release/win-unpacked/LoopWave.exe`); 147/147 Vitest tests and 20/20 Playwright E2E scenarios passing. |
 
 ---
 
@@ -36,30 +37,32 @@
 ### 1. Vitest Suite
 - **Framework**: Vitest v3.2.7
 - **Test Files**: 17 passed (17 total)
-- **Tests**: 144 passed (144 total)
+- **Tests**: 147 passed (147 total)
 - **Failures**: 0
 
 ### 2. Playwright Electron End-to-End Suite
 - **Script**: `tests/e2e/electronE2e.mjs`
-- **Scenarios**: 18 passed (18 total)
+- **Scenarios**: 20 passed (20 total)
   1. `Primary Simplified UI Layout (Responsive 1024/1280/1440px)`: PASS
   2. `YouTube Unembeddable Error & Fallback (kwXZjR5phcc)`: PASS
   3. `YouTube Second Unembeddable Fallback (n2YGWiRRxEs)`: PASS
-  4. `Local Direct Media Playback (sample_local.mp4)`: PASS
-  5. `YouTube Embeddable Playback (M7lc1UVf-VE)`: PASS
-  6. `YouTube Second Embeddable Playback (jNQXAC9IVRw)`: PASS
-  7. `Direct MP4 Video Playback (flower.mp4)`: PASS
-  8. `Direct WebM Video Playback (flower.webm)`: PASS
-  9. `Direct Audio Playback (t-rex-roar.mp3)`: PASS
-  10. `Live HLS Stream Playback (x36xhzz.m3u8)`: PASS
-  11. `Loop Mode Cycling (Off -> Repeat 1 -> Repeat All)`: PASS
-  12. `Queue Addition & Display`: PASS
-  13. `Playlist & Queue Polish (Phase 2.1)`: PASS
-  14. `Media Library Visual Polish & Verification (Phase 3.1)`: PASS
-  15. `Playback Analytics Dashboard Redesign & Verification (Phase 4)`: PASS
-  16. `Settings & Privacy UI Redesign & Verification (Phase 5)`: PASS
-  17. `Secondary Overlays (Playlist, Library, Analytics, Settings, About)`: PASS
-  18. `Packaged Windows Executable (Live Direct Binary Launch & Playback Smoke Test)`: PASS
+  4. `YouTube Embeddable Playback (M7lc1UVf-VE)`: PASS
+  5. `YouTube Second Embeddable Playback (jNQXAC9IVRw)`: PASS
+  6. `YouTube Embeddable Shorts Playback (7Pq-S557XQU)`: PASS
+  7. `YouTube Direct Recovery From Error (kwXZjR5phcc -> M7lc1UVf-VE)`: PASS
+  8. `Local Direct Media Playback (sample_local.mp4)`: PASS
+  9. `Direct MP4 Video Playback (flower.mp4)`: PASS
+  10. `Direct WebM Video Playback (flower.webm)`: PASS
+  11. `Direct Audio Playback (t-rex-roar.mp3)`: PASS
+  12. `Live HLS Stream Playback (x36xhzz.m3u8)`: PASS
+  13. `Loop Mode Cycling (Off -> Repeat 1 -> Repeat All)`: PASS
+  14. `Queue Addition & Display`: PASS
+  15. `Playlist & Queue Polish (Phase 2.1)`: PASS
+  16. `Media Library Visual Polish & Verification (Phase 3.1)`: PASS
+  17. `Playback Analytics Dashboard Redesign & Verification (Phase 4)`: PASS
+  18. `Settings & Privacy UI Redesign & Verification (Phase 5)`: PASS
+  19. `Secondary Overlays (Playlist, Library, Analytics, Settings, About)`: PASS
+  20. `Packaged Windows Executable (Live Direct Binary Launch & Playback Smoke Test)`: PASS
 - **Console Errors / Network Failures**: 0 errors, 0 failed network requests.
 - **Visual Verification**: Fully verified across 1024px, 1280px, and 1440px desktop viewports with 0 layout collisions.
 
@@ -67,6 +70,6 @@
 
 ## Packaged Windows Release
 - **Executable**: `release/win-unpacked/LoopWave.exe` (~186 MB)
-- **SHA-256 Checksum**: `728B9E51963623BF04D428D218A27C4620D8C67E9B35E58D06947359EE22CE61`
+- **SHA-256 Checksum**: `2BA7179E7A33AA574485D98259914A9E16EE446C76DB0C8DC4EBDB9515DC7CEF`
 - **Architecture**: Windows x64
 - **Startup verified**: Launches and runs production build cleanly from standalone binary (`PACKAGED_LAUNCH_OK`, `READYSTATE_4_PLAYBACK_VERIFIED`).

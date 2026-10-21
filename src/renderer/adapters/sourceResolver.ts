@@ -123,6 +123,7 @@ export function resolveSource(inputUrl: string): ResolveResult {
     hostname === 'www.youtube.com' ||
     hostname === 'youtube.com' ||
     hostname === 'm.youtube.com' ||
+    hostname === 'music.youtube.com' ||
     hostname === 'youtu.be' ||
     hostname === 'www.youtube-nocookie.com';
 
@@ -137,6 +138,8 @@ export function resolveSource(inputUrl: string): ResolveResult {
       videoId = pathname.split('/embed/')[1]?.split('/')[0]?.split('?')[0] || null;
     } else if (pathname.startsWith('/shorts/')) {
       videoId = pathname.split('/shorts/')[1]?.split('/')[0]?.split('?')[0] || null;
+    } else if (pathname.startsWith('/live/')) {
+      videoId = pathname.split('/live/')[1]?.split('/')[0]?.split('?')[0] || null;
     } else if (pathname.startsWith('/v/')) {
       videoId = pathname.split('/v/')[1]?.split('/')[0]?.split('?')[0] || null;
     }

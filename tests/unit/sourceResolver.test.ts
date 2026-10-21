@@ -33,6 +33,29 @@ describe('SourceResolver', () => {
       expect(res.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=n2YGWiRRxEs');
     });
 
+    it('resolves YouTube Shorts with query parameters and trailing slashes', () => {
+      const res = resolveSource('https://www.youtube.com/shorts/kwXZjR5phcc?feature=share&si=abc123xyz');
+      expect(res.success).toBe(true);
+      expect(res.source?.sourceType).toBe('youtube');
+      expect(res.source?.videoId).toBe('kwXZjR5phcc');
+      expect(res.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=kwXZjR5phcc');
+    });
+
+    it('resolves YouTube Live stream URLs', () => {
+      const res = resolveSource('https://www.youtube.com/live/M7lc1UVf-VE');
+      expect(res.success).toBe(true);
+      expect(res.source?.sourceType).toBe('youtube');
+      expect(res.source?.videoId).toBe('M7lc1UVf-VE');
+      expect(res.source?.canonicalUrl).toBe('https://www.youtube.com/watch?v=M7lc1UVf-VE');
+    });
+
+    it('resolves music.youtube.com URLs', () => {
+      const res = resolveSource('https://music.youtube.com/watch?v=M7lc1UVf-VE');
+      expect(res.success).toBe(true);
+      expect(res.source?.sourceType).toBe('youtube');
+      expect(res.source?.videoId).toBe('M7lc1UVf-VE');
+    });
+
     it('normalizes all 3 forms of the verification video to the same video ID', () => {
       const shorts = resolveSource('https://www.youtube.com/shorts/n2YGWiRRxEs');
       const watch = resolveSource('https://www.youtube.com/watch?v=n2YGWiRRxEs');

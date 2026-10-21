@@ -55,6 +55,9 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
   private player: any = null;
   private timeUpdateInterval: any = null;
   private isDisposed = false;
+  private currentLoadSessionId = 0;
+  private currentLoadTimeout: any = null;
+  private activeContainer: HTMLElement | null = null;
 
   canHandle(source: ResolvedSource): boolean {
     return source.sourceType === 'youtube' && Boolean(source.videoId);
@@ -76,19 +79,22 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
     options?: { autoPlay?: boolean; initialTime?: number; volume?: number }
   ): Promise<void> {
     this.dispose();
+    const sessionId = ++this.currentLoadSessionId;
     this.isDisposed = false;
+    this.activeContainer = container;
     this.updateState({ status: 'loading', error: null });
 
     try {
       await loadYouTubeIframeApi();
     } catch (err: any) {
+      if (this.isDisposed || this.currentLoadSessionId !== sessionId) return;
       this.setError('YT_API_LOAD_FAILED', err.message || 'Failed to load YouTube API', true, err);
       return;
     }
 
-    if (this.isDisposed) return;
+    if (this.isDisposed || this.currentLoadSessionId !== sessionId) return;
 
-    // Clean previous container contents
+    // Clean previous container contents and mount fresh DOM element
     container.innerHTML = '';
     const iframeMountId = `yt_player_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const iframeMount = document.createElement('div');
@@ -115,21 +121,34 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
       window.location.origin !== 'null'
     ) {
       playerVars.origin = window.location.origin;
+      if (window.location.href) {
+        playerVars.widget_referrer = window.location.href;
+      }
     }
 
     return new Promise((resolve) => {
       let isResolved = false;
 
-      // Guard timeout against stuck loading
-      const loadTimeout = setTimeout(() => {
-        if (!isResolved && !this.isDisposed) {
+      const safeResolve = () => {
+        if (!isResolved) {
           isResolved = true;
+          if (this.currentLoadTimeout) {
+            clearTimeout(this.currentLoadTimeout);
+            this.currentLoadTimeout = null;
+          }
+          resolve();
+        }
+      };
+
+      // Guard timeout against stuck loading
+      this.currentLoadTimeout = setTimeout(() => {
+        if (!isResolved && !this.isDisposed && this.currentLoadSessionId === sessionId) {
           this.setError(
             'YT_LOAD_TIMEOUT',
             'YouTube player took too long to initialize. Verify video availability and network.',
             true
           );
-          resolve();
+          safeResolve();
         }
       }, 15000);
 
@@ -141,14 +160,15 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
           playerVars,
           events: {
             onReady: () => {
-              if (this.isDisposed || isResolved) return;
-              isResolved = true;
-              clearTimeout(loadTimeout);
+              if (this.isDisposed || this.currentLoadSessionId !== sessionId || isResolved) return;
+              safeResolve();
 
-              const duration = this.player.getDuration() || 0;
+              const duration = this.player.getDuration ? (this.player.getDuration() || 0) : 0;
               const volume = options?.volume ?? 80;
               try {
-                this.player.setVolume(volume);
+                if (typeof this.player.setVolume === 'function') {
+                  this.player.setVolume(volume);
+                }
               } catch {
                 // ignore
               }
@@ -164,33 +184,30 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
 
               if (options?.autoPlay) {
                 try {
-                  this.player.playVideo();
+                  if (typeof this.player.playVideo === 'function') {
+                    this.player.playVideo();
+                  }
                 } catch {
                   // ignore
                 }
               }
-
-              resolve();
             },
             onStateChange: (event: any) => {
-              if (this.isDisposed) return;
+              if (this.isDisposed || this.currentLoadSessionId !== sessionId) return;
               this.handlePlayerStateChange(event.data);
             },
             onError: (event: any) => {
-              if (this.isDisposed) return;
-              clearTimeout(loadTimeout);
+              if (this.isDisposed || this.currentLoadSessionId !== sessionId) return;
+              safeResolve();
               this.handlePlayerError(event.data);
-              if (!isResolved) {
-                isResolved = true;
-                resolve();
-              }
             }
           }
         });
       } catch (err: any) {
-        clearTimeout(loadTimeout);
-        this.setError('YT_INIT_EXCEPTION', err.message || 'Failed to initialize player', true, err);
-        resolve();
+        safeResolve();
+        if (!this.isDisposed && this.currentLoadSessionId === sessionId) {
+          this.setError('YT_INIT_EXCEPTION', err.message || 'Failed to initialize player', true, err);
+        }
       }
     });
   }
@@ -351,7 +368,13 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
 
   dispose(): void {
     this.isDisposed = true;
+    this.currentLoadSessionId++;
     this.stopTimeTicker();
+
+    if (this.currentLoadTimeout) {
+      clearTimeout(this.currentLoadTimeout);
+      this.currentLoadTimeout = null;
+    }
 
     if (this.player) {
       try {
@@ -362,6 +385,15 @@ export class YouTubeAdapter extends BasePlaybackAdapter {
         console.warn('Error destroying YouTube player instance:', err);
       }
       this.player = null;
+    }
+
+    if (this.activeContainer) {
+      try {
+        this.activeContainer.innerHTML = '';
+      } catch {
+        // ignore
+      }
+      this.activeContainer = null;
     }
 
     this.updateState({ status: 'idle', error: null, currentTime: 0, duration: 0 });

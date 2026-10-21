@@ -358,6 +358,98 @@ async function runE2e() {
     results.push({ test: 'YouTube Second Embeddable Playback', status: 'FAIL', details: err.message });
   }
 
+  // 2e. Embeddable YouTube Shorts Playback Verification (7Pq-S557XQU)
+  try {
+    console.log('Testing embeddable YouTube Shorts: https://www.youtube.com/shorts/7Pq-S557XQU');
+    await page.fill('#main-url-input', 'https://www.youtube.com/shorts/7Pq-S557XQU?feature=share');
+    await page.waitForTimeout(300);
+
+    await page.click('#main-play-button');
+    await page.waitForTimeout(3500);
+
+    const shortsInitial = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        duration: ps?.adapterState?.duration,
+        currentTime: ps?.adapterState?.currentTime,
+        canonicalUrl: ps?.currentSource?.canonicalUrl,
+        videoId: ps?.currentSource?.videoId
+      };
+    });
+
+    await page.waitForTimeout(1500);
+    const shortsProgress = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        currentTime: ps?.adapterState?.currentTime
+      };
+    });
+
+    const isShortsPlaybackOk = Boolean(
+      shortsInitial &&
+      shortsInitial.videoId === '7Pq-S557XQU' &&
+      shortsInitial.canonicalUrl === 'https://www.youtube.com/watch?v=7Pq-S557XQU' &&
+      (shortsInitial.status === 'playing' || shortsProgress.status === 'playing') &&
+      shortsProgress.currentTime >= shortsInitial.currentTime
+    );
+
+    results.push({
+      test: 'YouTube Embeddable Shorts Playback (7Pq-S557XQU)',
+      status: isShortsPlaybackOk ? 'PASS' : 'FAIL',
+      details: isShortsPlaybackOk
+        ? `Embeddable YouTube Short playing natively. Normalized to ${shortsInitial.canonicalUrl}, playhead advanced to ${shortsProgress.currentTime.toFixed(2)}s.`
+        : 'Embeddable YouTube Short failed to play or advance playhead.'
+    });
+  } catch (err) {
+    results.push({ test: 'YouTube Embeddable Shorts Playback', status: 'FAIL', details: err.message });
+  }
+
+  // 2f. Direct Recovery from Unembeddable to Embeddable Video (No restart, no dismiss)
+  try {
+    console.log('Testing direct recovery: loading unembeddable video followed immediately by embeddable video');
+    await page.fill('#main-url-input', 'https://www.youtube.com/shorts/kwXZjR5phcc');
+    await page.click('#main-play-button');
+    await page.waitForTimeout(3500);
+
+    const errorState = await page.evaluate(() => window.__playerStore?.getState()?.adapterState?.status);
+
+    // Switch immediately without dismiss
+    await page.fill('#main-url-input', 'https://www.youtube.com/watch?v=M7lc1UVf-VE');
+    await page.click('#main-play-button');
+    await page.waitForTimeout(3500);
+
+    const recoveredState = await page.evaluate(() => {
+      const ps = window.__playerStore?.getState();
+      return {
+        status: ps?.adapterState?.status,
+        currentTime: ps?.adapterState?.currentTime,
+        duration: ps?.adapterState?.duration,
+        videoId: ps?.currentSource?.videoId,
+        hasError: Boolean(ps?.adapterState?.error)
+      };
+    });
+
+    const isRecoveryOk = Boolean(
+      errorState === 'error' &&
+      recoveredState.status === 'playing' &&
+      recoveredState.videoId === 'M7lc1UVf-VE' &&
+      !recoveredState.hasError &&
+      recoveredState.duration > 0
+    );
+
+    results.push({
+      test: 'YouTube Direct Recovery From Error (kwXZjR5phcc -> M7lc1UVf-VE)',
+      status: isRecoveryOk ? 'PASS' : 'FAIL',
+      details: isRecoveryOk
+        ? `Successfully transitioned directly from restricted video error state to active playing state (M7lc1UVf-VE) without application restart or manual dismissal.`
+        : 'Failed to cleanly transition from error state to active video playback.'
+    });
+  } catch (err) {
+    results.push({ test: 'YouTube Direct Recovery From Error', status: 'FAIL', details: err.message });
+  }
+
   // 3a. Local Media Direct File Playback Verification (Without Copying)
   try {
     const localFixturePath = 'C:/Users/sunny/.gemini/antigravity-cli/brain/e5791bb4-57fd-4887-b437-13ce87c53fa9/scratch/sample_local.mp4';
